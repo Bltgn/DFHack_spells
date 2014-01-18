@@ -3,7 +3,7 @@ fov = require 'fov'
 
 args={...}
 
-function isSelected(unit,view)
+function isSelected(unit,view,height)
    local pos = {dfhack.units.getPosition(unit)}
 
 	 if pos[1] < view.xmin or pos[1] > view.xmax then
@@ -14,18 +14,18 @@ function isSelected(unit,view)
       return false
    end
 
-	 return pos[3] > view.z
+	 return pos[3] >= view.z and pos[3] <= view.z + height
 
 end
 
-function findLOS(unit,radius,strength)
+function findLOS(unit,radius,strength,height)
    local view = fov.get_fov(radius, unit.pos)
 	 local i
 	 local unitList = df.global.world.units.active
 
 	 for i = #unitList - 1, 0, -1 do
       unitTarget = unitList[i]
-			if isSelected(unitTarget, view) then
+			if isSelected(unitTarget, view,height) then
 
 if unitTarget==nil then
 	 print ("No unit under cursor!  Aborting!")
@@ -105,6 +105,7 @@ end
 
 unit = df.unit.find(tonumber(args[1]))
 radius = tonumber(args[2])
-strength = tonumber(args[3])
+height = tonumber(args[3])
+strength = tonumber(args[4])
 
-findLOS(unit,radius,strength)
+findLOS(unit,radius,strength,height)
