@@ -1,31 +1,40 @@
 
-fov = require 'fov'
-
 args={...}
 
-function isSelected(unit,view,height)
+function isSelected(unit,radius,height)
 	local pos = {dfhack.units.getPosition(unit)}
 
-	if pos[1] < view.xmin or pos[1] > view.xmax then
+	local mapx, mapy, mapz = dfhack.maps.getTileSize()
+	local xmin = unit.pos.x - radius
+	local xmax = unit.pos.x + radius
+	local ymin = unit.pos.y - radius
+	local ymax = unit.pos.y + radius
+	local zmax = unit.pos.z + height
+	if xmin < 1 then xmin = 1 end
+	if ymin < 1 then ymin = 1 end
+	if xmax > mapx then xmax = mapx-1 end
+	if ymax > mapy then ymax = mapy-1 end
+	if zmax > mapz then zmax = mapz-1 end
+
+	if pos[1] < xmin or pos[1] > xmax then
 		return false
 	end
 
-	if pos[2] < view.ymin or pos[2] > view.ymax then
+	if pos[2] < ymin or pos[2] > ymax then
 		return false
 	end
 
-	return pos[3] >= view.z and pos[3] <= view.z + height
+	return pos[3] >= unit.pos.z and pos[3] <= zmax
 
 end
 
 function radiuseffect(etype,unit,radius,height,strength)
-	local view = fov.get_fov(radius, unit.pos)
 	local i
 	local unitList = df.global.world.units.active
 
 	for i = #unitList - 1, 0, -1 do
 		unitTarget = unitList[i]
-		if isSelected(unitTarget, view, height) then
+		if isSelected(unitTarget, radius, height) then
 			if etype == 'web' then unitTarget.counters.webbed = strength end
 			if etype == 'stun' then unitTarget.counters.stunned = strength end
 			if etype == 'winded' then unitTarget.counters.winded = strength end

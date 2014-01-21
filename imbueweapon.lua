@@ -34,6 +34,6 @@ local sindex = item.mat_index
 item.mat_type = mat_type
 item.mat_index = mat_index
 
-if time ~= then
-	dfhack.timeout(time,'ticks',createcallback(item,stype,sindex))
+if time ~= 0 then
+	dfhack.timeout(time,'days',createcallback(item,stype,sindex))
 end
