@@ -1,4 +1,36 @@
 
+--[[
+Description: Causes an "eruption" of water or magma under a creature with a specified radius and a specified height.
+
+Use: 
+[SYN_CLASS:\COMMAND][SYN_CLASS:eruption][SYN_CLASS:type][SYN_CLASS:\UNIT_ID][SYN_CLASS:radius][SYN_CLASS:height][SYN_CLASS:depth]
+type = type of liquid created (VALID TOKENS: magma, water)
+radius = number of tiles away from target creature you want creatures to be affected in the x-y plane (VALID TOKENS: INTEGER[0 - map size])
+height = number of tiles high the liquid is created, allows for large columns of water and magma to be made (VALID TOKENS: INTEGER[0 - map height])
+depth =  amount of liquid created at center, falls off as you move away from the center to 1 at the max radius (VALID TOKENS: INTEGER[1 - 7])
+
+Example: 
+Code: [Select]
+[INTERACTION:SPELL_ELEMENTAL_FIRE_VOLCANO]
+	[I_SOURCE:CREATURE_ACTION]
+	[I_TARGET:C:CREATURE]
+		[IT_LOCATION:CONTEXT_CREATURE]
+		[IT_MANUAL_INPUT:target]
+	[I_EFFECT:ADD_SYNDROME]
+		[IE_TARGET:C]
+		[IE_IMMEDIATE]
+		[SYNDROME]
+			[SYN_CLASS:\COMMAND]
+			[SYN_CLASS:eruption]
+			[SYN_CLASS:magma]
+			[SYN_CLASS:\UNIT_ID]
+			[SYN_CLASS:4]
+			[SYN_CLASS:0]
+			[SYN_CLASS:7]
+			[CE_SPEED_CHANGE:SPEED_PERC:100:START:0:END:1]
+
+]]
+
 args={...}
 
 function eruption(etype,unit,radius,height,depth)

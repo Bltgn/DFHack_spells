@@ -1,4 +1,36 @@
 
+--[[
+Description: Creates a number of random explosions of a specific type using spawnflow (same type of code as Putnam's projectileExpansion). Hits in a radius around the targeted unit once. Only hits outside.
+
+Use: 
+[SYN_CLASS:\COMMAND][SYN_CLASS:storm][SYN_CLASS:type][SYN_CLASS:\UNIT_ID][SYN_CLASS:radius][SYN_CLASS:number][SYN_CLASS:strength][SYN_CLASS:inorganic]
+type = counter that is changed (VALID TOKENS: miasma, mist, mist2, dust, lavamist, smoke, dragonfire, firebreath, web, undirectedgas, undirectedvapor, oceanwave, seafoam)
+radius = number of tiles away from target creature you want flows to be spawned in the x-y plane (VALID TOKENS: INTEGER[0 - map size])
+number = amount of flows to spawn (VALID TOKENS: INTEGER[1+])
+strength = size of the flow to spawn (VALID TOKENS: INTEGER[1+])
+inorganic = some of the flows take an inorganic as a further argument for dust, lavamist, web, undirectedgas, and undirectedvapor add this extra syndrome class (VALID TOKENS: INORGANIC_SUBTYPE)
+
+Example: 
+[INTERACTION:SPELL_ELEMENTAL_FIRE_METEOR_STORM]
+	[I_SOURCE:CREATURE_ACTION]
+	[I_TARGET:C:CREATURE]
+		[IT_LOCATION:CONTEXT_CREATURE]
+		[IT_MANUAL_INPUT:target]
+	[I_EFFECT:ADD_SYNDROME]
+		[IE_TARGET:C]
+		[IE_IMMEDIATE]
+		[SYNDROME]
+			[SYN_CLASS:\COMMAND]
+			[SYN_CLASS:storm]
+			[SYN_CLASS:firebreath]
+			[SYN_CLASS:\UNIT_ID]
+			[SYN_CLASS:25]
+			[SYN_CLASS:5]
+			[SYN_CLASS:50]
+			[CE_SPEED_CHANGE:SPEED_PERC:100:START:0:END:1]
+
+]]
+
 args={...}
 
 flowtypes = {
