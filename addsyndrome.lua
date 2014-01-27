@@ -1,10 +1,10 @@
 
 --[[
-Description: 
+Description: Changes to the boolean values, the changes last a certain number of ticks. 
 
 Use: 
 [SYN_CLASS:\COMMAND]
-[SYN_CLASS:teleport]
+[SYN_CLASS:addsyndrome]
 [SYN_CLASS:type]
 [SYN_CLASS:\UNIT_ID]
 [SYN_CLASS:radius]
@@ -18,7 +18,7 @@ Use:
 [SYN_CLASS:immune syndrome class]
 [SYN_CLASS:forbidden tokens]
 
-type = type of thing to be teleported (VALID TOKENS: unit, item, both)
+type = syndrome to be added. specified in an inorganic (VALID TOKENS: ANY INORGANIC)
 radius = x,y,z extent of the effect from the target creature, if x=y=z=-1 then will only be target creature, if x=y=z=0 then will only be target creatures space (VALID TOKEN: INTEGER[-1 - mapsize])
 target = who is eligible to be targeted (VALID TOKENS: enemy, civ, all)
 affected class = creature class that is affected, use NONE to skip this check (VALID TOKENS: ANY CREATURE CLASS TOKENS {seperated by commas}, or NONE)
@@ -31,7 +31,7 @@ immune syndrome class = syndrome class that is immune, use NONE to skip this che
 forbidden tokens = tokens that are forbidden, use NONE to skip this check (VALID TOKENS: ANY TOKENS FOUND IN 'tokens.txt')
 
 Example:
-[INTERACTION:SPELL_ARCANE_TIME_RETREAT]
+[INTERACTION:UPGRADE_CLASS_MAGE]
 	[I_SOURCE:CREATURE_ACTION]
 	[I_TARGET:C:CREATURE]
 		[IT_LOCATION:CONTEXT_CREATURE]
@@ -41,23 +41,63 @@ Example:
 		[IE_IMMEDIATE]
 		[SYNDROME]
 			[SYN_CLASS:\COMMAND]
-			[SYN_CLASS:teleport]
-			[SYN_CLASS:unit]
+			[SYN_CLASS:addsyndrome]
+			[SYN_CLASS:CLASS_CHANGE_ARCH_MAGE]
 			[SYN_CLASS:\UNIT_ID]
 			[SYN_CLASS:-1,-1,-1]
 			[SYN_CLASS:civ]
 			[SYN_CLASS:NONE]
 			[SYN_CLASS:NONE]
+			[SYN_CLASS:MAGE]
 			[SYN_CLASS:NONE]
 			[SYN_CLASS:NONE]
 			[SYN_CLASS:NONE]
 			[SYN_CLASS:NONE]
-			[SYN_CLASS:FROZEN,PETRIFIED,SILENCED]
 			[SYN_CLASS:NONE]
 			[CE_SPEED_CHANGE:SPEED_PERC:100:START:0:END:1]
 ]]
 
 args={...}
+
+local function alreadyHasSyndrome(unit,syn_id) --taken from Putnam's itemSyndrome
+    for _,syndrome in ipairs(unit.syndromes.active) do
+        if syndrome.type == syn_id then return true end
+    end
+    return false
+end
+
+local function assignSyndrome(target,syn_id) --taken from Putnam's itemSyndrome
+    if target==nil then
+        return nil
+    end
+    if alreadyHasSyndrome(target,syn_id) then
+        local syndrome
+        for k,v in ipairs(target.syndromes.active) do
+            if v.type == syn_id then syndrome = v end
+        end
+        if not syndrome then return nil end
+        syndrome.ticks=1
+        return true
+    end
+    local newSyndrome=df.unit_syndrome:new()
+    local target_syndrome=df.syndrome.find(syn_id)
+    newSyndrome.type=target_syndrome.id
+    newSyndrome.year=df.global.cur_year
+    newSyndrome.year_time=df.global.cur_year_tick
+    newSyndrome.ticks=1
+    newSyndrome.unk1=1
+    for k,v in ipairs(target_syndrome.ce) do
+        local sympt=df.unit_syndrome.T_symptoms:new()
+        sympt.ticks=1
+        sympt.flags=2
+        newSyndrome.symptoms:insert("#",sympt)
+    end
+    target.syndromes.active:insert("#",newSyndrome)
+    if itemsyndromedebug then
+        print("Assigned syndrome #" ..syn_id.." to unit.")
+    end
+    return true
+end
 
 function split(str, pat)
    local t = {}  -- NOTE: use {n = 0} in Lua-5.0
@@ -200,109 +240,48 @@ function isSelected(unit,unitTarget,rx,ry,rz,target,aclass,acreature,asyndrome,a
 	return false
 end
 
-function isSelectedItem(unit,itemTarget,rx,ry,rz)
-	local pos = itemTarget.pos
+function effect(etype,unit,radius,target,aclass,acreature,asyndrome,atoken,iclass,icreature,isyndrome,itoken)
+	local i
+	local unitList = df.global.world.units.active
+	local radiusa = split(radius,',')
+	local rx = tonumber(radiusa[1])
+	local ry = tonumber(radiusa[2])
+	local rz = tonumber(radiusa[3])
 
-	local mapx, mapy, mapz = dfhack.maps.getTileSize()
-	local xmin = unit.pos.x - rx
-	local xmax = unit.pos.x + rx
-	local ymin = unit.pos.y - ry
-	local ymax = unit.pos.y + ry
-	local zmin = unit.pos.z
-	local zmax = unit.pos.z + rz
-	if xmin < 1 then xmin = 1 end
-	if ymin < 1 then ymin = 1 end
-	if xmax > mapx then xmax = mapx-1 end
-	if ymax > mapy then ymax = mapy-1 end
-	if zmax > mapz then zmax = mapz-1 end
-
-	if pos.x < xmin or pos.x > xmax then return false end
-	if pos.y < ymin or pos.y > ymax then return false end
-	if pos.z < zmin or pos.z > zmax then return false end
-
-	return true
+	if (rx*ry*rz < 0) then
+		unitTarget = unit
+		if isSelected(unit,unitTarget,0,0,0,target,aclass,acreature,asyndrome,atoken,iclass,icreature,isyndrome,itoken) then
+			local syndromes = dfhack.matinfo.find(etype).material.syndrome
+			for j = 0, #syndromes -1, 1 do
+				assignSyndrome(unitTarget,syndromes[j].id)
+				print(syndromes[j].id)
+			end
+		end
+	else
+		for i = #unitList - 1, 0, -1 do
+			unitTarget = unitList[i]
+			if isSelected(unit,unitTarget,rx,ry,rz,target,aclass,acreature,asyndrome,atoken,iclass,icreature,isyndrome,itoken) then
+				local syndromes = dfhack.matinfo.find(etype).material.syndrome
+				for _,syndrome in syndromes do
+					assignSyndrome(unitTarget,syndrome.id)
+					print(syndrome.id)
+				end
+			end
+		end
+	end
 end
 
-local ttype = args[1]
+local etype = args[1]
 local unit = df.unit.find(tonumber(args[2]))
-local dir = tonumber(args[3])
-local radius = args[4]
-local target = args[5]
-local aclass = args[6]
-local acreature = args[7]
-local asyndrome = args[8]
-local atoken = args[9]
-local iclass = args[10]
-local icreature = args[11]
-local isyndrome = args[12]
-local itoken = args[13]
-local i
-local radiusa = split(radius,',')
-local rx = tonumber(radiusa[1])
-local ry = tonumber(radiusa[2])
-local rz = tonumber(radiusa[3])
+local radius = args[3]
+local target = args[4]
+local aclass = args[5]
+local acreature = args[6]
+local asyndrome = args[7]
+local atoken = args[8]
+local iclass = args[9]
+local icreature = args[10]
+local isyndrome = args[11]
+local itoken = args[12]
 
-pers,status = dfhack.persistent.get('teleport')
-if pers.ints[7] == 1 then
-	if ttype == 'unit' or ttype == 'both' then
-		if (rx*ry*rz < 0) then
-			if isSelected(unit,unitTarget,0,0,0,target,aclass,acreature,asyndrome,atoken,iclass,icreature,isyndrome,itoken) then
-				if dir == 1 then
-					local unitoccupancy = dfhack.maps.getTileBlock(unit.pos).occupancy[unit.pos.x%16][unit.pos.y%16]
-					unit.pos.x = pers.ints[1]
-					unit.pos.y = pers.ints[2]
-					unit.pos.z = pers.ints[3]
-					if not unit.flags1.on_ground then unitoccupancy.unit = false else unitoccupancy.unit_grounded = false end
-				elseif dir == 2 then
-					local unitoccupancy = dfhack.maps.getTileBlock(unit.pos).occupancy[unit.pos.x%16][unit.pos.y%16]
-					unit.pos.x = pers.ints[4]
-					unit.pos.y = pers.ints[5]
-					unit.pos.z = pers.ints[6]
-					if not unit.flags1.on_ground then unitoccupancy.unit = false else unitoccupancy.unit_grounded = false end
-				end
-			end
-		else
-			local unitList = df.global.world.units.active
-			for i = #unitList - 1, 0, -1 do
-				local unitTarget = unitList[i]
-				if isSelected(unit,unitTarget,rx,ry,rz,target,aclass,acreature,asyndrome,atoken,iclass,icreature,isyndrome,itoken) then
-					if dir == 1 then
-						local unitoccupancy = dfhack.maps.getTileBlock(unit.pos).occupancy[unit.pos.x%16][unit.pos.y%16]
-						unit.pos.x = pers.ints[1]
-						unit.pos.y = pers.ints[2]
-						unit.pos.z = pers.ints[3]
-						if not unit.flags1.on_ground then unitoccupancy.unit = false else unitoccupancy.unit_grounded = false end
-					elseif dir == 2 then
-						local unitoccupancy = dfhack.maps.getTileBlock(unit.pos).occupancy[unit.pos.x%16][unit.pos.y%16]
-						unit.pos.x = pers.ints[4]
-						unit.pos.y = pers.ints[5]
-						unit.pos.z = pers.ints[6]
-						if not unit.flags1.on_ground then unitoccupancy.unit = false else unitoccupancy.unit_grounded = false end
-					end
-				end
-			end
-		end
-	end
-	if ttype == 'item' or ttype == 'both' then
-		local itemList = df.global.world.items.all
-		for i = #itemList - 1, 0, -1 do
-			local itemTarget = itemList[i]
-			print(itemTarget)
-			if isSelectedItem(unit,itemTarget,rx,ry,rz) then
-				if dir == 1 then
-					local pos = {}
-					pos.x = pers.ints[1]
-					pos.y = pers.ints[2]
-					pos.z = pers.ints[3]
-					dfhack.items.moveToGround(itemTarget, pos)
-				elseif dir == 2 then
-					local pos = {}
-					pos.x = pers.ints[4]
-					pos.y = pers.ints[5]
-					pos.z = pers.ints[6]
-					dfhack.items.moveToGround(itemTarget, pos)
-				end
-			end
-		end
-	end
-end
+effect(etype,unit,radius,target,aclass,acreature,asyndrome,atoken,iclass,icreature,isyndrome,itoken)

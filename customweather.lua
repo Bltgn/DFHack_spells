@@ -3,7 +3,14 @@
 Description: Creates a number of random explosions of a specific type using spawnflow (same type of code as Putnam's projectileExpansion). Only hits outside. Hits the whole map for a specified period of time. Flows are spawned every 1000 ticks in order to limit fps impact. Since it affects the entire map it is suggested to use a number in the hundreds.
 
 Use: 
-[SYN_CLASS:\COMMAND][SYN_CLASS:weather][SYN_CLASS:type][SYN_CLASS:number][SYN_CLASS:strength][SYN_CLASS:duration][SYN_CLASS:inorganic]
+[SYN_CLASS:\COMMAND]
+[SYN_CLASS:weather]
+[SYN_CLASS:type]
+[SYN_CLASS:number]
+[SYN_CLASS:strength]
+[SYN_CLASS:duration]
+[SYN_CLASS:inorganic]
+
 type = counter that is changed (VALID TOKENS: miasma, mist, mist2, dust, lavamist, smoke, dragonfire, firebreath, web, undirectedgas, undirectedvapor, oceanwave, seafoam)
 number = amount of flows to spawn (VALID TOKENS: INTEGER[1+])
 strength = size of the flow to spawn (VALID TOKENS: INTEGER[1+])

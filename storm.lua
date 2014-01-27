@@ -3,7 +3,15 @@
 Description: Creates a number of random explosions of a specific type using spawnflow (same type of code as Putnam's projectileExpansion). Hits in a radius around the targeted unit once. Only hits outside.
 
 Use: 
-[SYN_CLASS:\COMMAND][SYN_CLASS:storm][SYN_CLASS:type][SYN_CLASS:\UNIT_ID][SYN_CLASS:radius][SYN_CLASS:number][SYN_CLASS:strength][SYN_CLASS:inorganic]
+[SYN_CLASS:\COMMAND]
+[SYN_CLASS:storm]
+[SYN_CLASS:type]
+[SYN_CLASS:\UNIT_ID]
+[SYN_CLASS:radius]
+[SYN_CLASS:number]
+[SYN_CLASS:strength]
+[SYN_CLASS:inorganic]
+
 type = counter that is changed (VALID TOKENS: miasma, mist, mist2, dust, lavamist, smoke, dragonfire, firebreath, web, undirectedgas, undirectedvapor, oceanwave, seafoam)
 radius = number of tiles away from target creature you want flows to be spawned in the x-y plane (VALID TOKENS: INTEGER[0 - map size])
 number = amount of flows to spawn (VALID TOKENS: INTEGER[1+])

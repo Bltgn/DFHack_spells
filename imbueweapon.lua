@@ -3,7 +3,12 @@
 Description: Changes the material of your current weapon for a set period of time
 
 Use: 
-[SYN_CLASS:\COMMAND][SYN_CLASS:imbueweapon][SYN_CLASS:\UNIT_ID][SYN_CLASS:material][SYN_CLASS:time]
+[SYN_CLASS:\COMMAND]
+[SYN_CLASS:imbueweapon]
+[SYN_CLASS:\UNIT_ID]
+[SYN_CLASS:material]
+[SYN_CLASS:time]
+
 material = the inorganic that you want to change your weapon into (VALID TOKENS: INORGANIC_SUBTYPE)
 time = number of in game ticks that you want the change to last for, if you want the effect to be permanent use 0 (VALID TOKENS: INTEGER[0+])
 
