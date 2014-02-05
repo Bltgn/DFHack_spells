@@ -262,7 +262,7 @@ function effect(etype,unit,radius,target,aclass,acreature,asyndrome,atoken,iclas
 			unitTarget = unitList[i]
 			if isSelected(unit,unitTarget,rx,ry,rz,target,aclass,acreature,asyndrome,atoken,iclass,icreature,isyndrome,itoken) then
 				local syndromes = dfhack.matinfo.find(etype).material.syndrome
-				for _,syndrome in syndromes do
+				for j = 0, #syndromes -1, 1 do
 					assignSyndrome(unitTarget,syndrome.id)
 					print(syndrome.id)
 				end
