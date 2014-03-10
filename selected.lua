@@ -1,4 +1,4 @@
-args={...}
+arg={...}
 
 function split(str, pat)
    local t = {}  -- NOTE: use {n = 0} in Lua-5.0
@@ -35,73 +35,364 @@ function getAttrValue(unit,attr,mental)
 	end
 end
 
-function isSelected(unit,unitTarget,args)
-
-	local s1 = '@'
-	local s2 = '/'
-	local s3 = ','
-	local s4 = ';'
-
-	local value = {
-	radius = '0,0,0',
-	target = 'all',
-	aclass = 'NONE',
-	acreature = 'NONE',
-	asyndrome = 'NONE',
-	atoken = 'NONE',
-	iclass = 'NONE',
-	icreature = 'NONE',
-	isyndrome = 'NONE',
-	itoken = 'NONE',
-	physical = 'NONE',
-	mental = 'NONE',
-	skills = 'NONE',
-	traits = 'NONE',
-	age = 'NONE',
-	noble = 'NONE',
-	speed = 'NONE',
-	profession = 'NONE'
-	}
-
--- Arguments Analysis	
-	local temp = 'NONE'
-	for i = 1, #args, 1 do
-		if string.match(args[i],s1) ~= nil then
-			temp = split(args[i],s1)
-			value[temp[1]] = temp[2]
+function getSelf()
+	local a = df.global.world.status.announcements
+	local unitList = df.global.world.units.active
+	local self = unit
+	for i = #a - 1, 0, -1 do
+		if tonumber(a[i].type) == 146 then
+			for i = #unitList - 1, 0, -1 do
+				if string.find(a[i].text,unitList[i].name.first_name) ~= nil then return unitList[i] end
+			end
 		end
 	end
+end
 
--- Value Determination
-	local rx = tonumber(split(value['radius'],',')[1])
-	local ry = tonumber(split(value['radius'],',')[2])
-	local rz = tonumber(split(value['radius'],',')[3])
-	local target = value['target']
-	local aclass = value['aclass']
-	local acreature = value['acreature']
-	local asyndrome = value['asyndrome']
-	local atoken = value['atoken']
-	local iclass = value['iclass']
-	local icreature = value['icreature']
-	local isyndrome = value['isyndrome']
-	local itoken = value['itoken']
-	local physical = value['physical']
-	local mental = value['mental']
-	local skills = value['skills']
-	local traits = value['traits']
-	local age = value['age']
-	local noble = value['noble']
-	local speed = value['speed']
-	local profession = value['profession']
+function checkDistance(unitTarget,array,target)
+	local rtype = split(arrau.';')[1]
+	local rarray = split(arrau,';')[2]
+	local rx = tonumber(split(rarray,'/')[1])
+	local ry = tonumber(split(rarray,'/')[2])
+	local rz = tonumber(split(rarray,'/')[3])
+	local unumber = 2
 
--- Raws Analysis	
-	local unitraws = df.creature_raw.find(unitTarget.race)
-	local casteraws = unitraws.caste[unitTarget.caste]
+	local selected,targetList,announcement = {true},{unitTarget},{''}
+	if rx*ry*rz > 0 then
+		local unitList = df.global.world.units.active
+		local mapx, mapy, mapz = dfhack.maps.getTileSize()
+
+		for i = 0, #unitList - 1, 1 do
+			local unit = unitList[i]
+			local xmin = unitTarget.pos.x - rx
+			local xmax = unitTarget.pos.x + rx
+			local ymin = unitTarget.pos.y - ry
+			local ymax = unitTarget.pos.y + ry
+			local zmin = unitTarget.pos.z - rz
+			local zmax = unitTarget.pos.z + rz
+			if xmin < 1 then xmin = 1 end
+			if ymin < 1 then ymin = 1 end
+			if zmin < 1 then zmin = 1 end
+			if xmax > mapx then xmax = mapx-1 end
+			if ymax > mapy then ymax = mapy-1 end
+			if zmax > mapz then zmax = mapz-1 end
+
+			if unit.pos.x >= xmin or unit.pos.x <= xmax or unit.pos.y >= ymin or unit.pos.y <= ymax or unit.pos.z >= zmin or unit.pos.z <= zmax then
+				if target == 'enemy' then
+					if unit.civ_id ~= unitTarget.civ_id then
+						targetList[unumber] = unit
+						selected[unumber] = true
+						announcement[unumber] = ''
+					end
+				elseif target == 'civ' then
+					if unit.civ_id == unitTarget.civ_id then
+						targetList[unumber] = unit
+						selected[unumber] = true
+						announcement[unumber] = ''
+					end
+				elseif target == 'all' then
+					targetList[unumber] = unit
+					selected[unumber] = true
+					announcement[unumber] = ''
+				else
+					targetList[unumber] = unit
+					selected[unumber] = false
+					announcement[unumber] = ''
+				end
+			unumber = unumber + 1
+			end
+		end
+	end
+	return selected,targetList,announcement
+end
+
+function checkAttributes(unit,array,mental)
+	local rtempa,itempa,r,i,required,immune = {},{},1,1,false,false
+	local rtext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. "'s attributes are too low."
+	local itext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. "'s attributes are too high."
+	local tempa = split(array,',')
+	for _,x in ipairs(tempa) do
+		local utemp = getAttrValue(unit,split(x,';')[2],mental)
+		if split(x,';')[1] == 'min' then
+			if tonumber(split(x,';')[3]) > utemp then
+				rtempa[r] = true
+			else
+				rtempa[r] = false
+			end
+			r = r + 1
+		elseif split(x,';')[1] == 'max' then
+			if tonumber(split(x,';')[3]) < utemp then
+				itempa[r] = true
+			else
+				itempa[r] = false
+			end
+			i = i + 1
+		end
+	end
+	for _,x in ipairs(rtempa) do
+		if x then required = true end
+	end
+	for _,x in ipairs(itempa) do
+		if x then immune = true end
+	end
+	if required and not immune then return false,itext end
+	if required and immune then return true,'NONE' end
+	if not required and immune then return false,rtext end
+	if not required and not immune then return false,rtext end
+end
+
+function checkTraits(unit,array)
+	local rtempa,itempa,r,i,required,immune = {},{},1,1,false,false
+	local rtext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. "'s traits are too low."
+	local itext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. "'s traits are too high."
+	local tempa,utempa = split(array,','),unit.status.current_soul.traits
+	for _,x in ipairs(tempa) do
+		for z,y in pairs(utempa) do
+			if split(x,';')[2] == z then
+				if split(x,';')[1] == 'min' then
+					if tonumber(split(x,';')[3]) > y then
+						rtempa[r] = true
+					else
+						rtempa[r] = false
+					end
+					r = r + 1
+				elseif split(x,';')[1] == 'max' then
+					if tonumber(split(x,';')[3]) < y then
+						itempa[r] = true
+					else
+						itempa[r] = false
+					end
+					i = i + 1
+				end
+			end
+		end
+	end
+	for _,x in ipairs(rtempa) do
+		if x then required = true end
+	end
+	for _,x in ipairs(itempa) do
+		if x then immune = true end
+	end
+	if required and not immune then return false,itext end
+	if required and immune then return true,'NONE' end
+	if not required and immune then return false,rtext end
+	if not required and not immune then return false,rtext end
+end
+
+function checkEntity(unit,array)
+	local rtempa,itempa,r,i,required,immune = {},{},1,1,false,false
+	local rtext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. ' is not a member of a required entity.'
+	local itext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. ' is a member of an immune entity.'
+	local tempa,utemp = split(array,','),'NONE'--NEED TO GET UNIT ENTITY!!!!
+	for _,x in ipairs(tempa) do
+		if split(x,';')[1] == 'required' then
+			if split(x,';')[2] == utemp then
+				rtempa[r] = true
+			else
+				rtempa[r] = false
+			end
+			r = r + 1
+		elseif split(x,';')[1] == 'immune' then
+			if split(x,';')[2] == utemp then
+				itempa[r] = true
+			else
+				itempa[r] = false
+			end
+			i = i + 1
+		end
+	end
+	for _,x in ipairs(rtempa) do
+		if x then required = true end
+	end
+	for _,x in ipairs(itempa) do
+		if x then immune = true end
+	end
+	if required and not immune then return true,'NONE' end
+	if required and immune then return false,itext end
+	if not required and immune then return false,itext end
+	if not required and not immune then return false,rtext end
+end
+
+function checkSkills(unit,array)
+	local rtempa,itempa,r,i,required,immune = {},{},1,1,false,false
+	local rtext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. "'s skills are too low."
+	local itext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. "'s skills are too high."
+	local tempa = split(array,',')
+	for _,x in ipairs(tempa) do
+		local utemp = dfhack.units.getEffectiveSkill(unit,df.job_skill[split(x,';')[2]])
+		if split(x,';')[1] == 'min' then
+			if tonumber(split(age,';')[3]) > utemp then
+				rtempa[r] = true
+			else
+				rtempa[r] = false
+			end
+			r = r + 1
+		elseif split(x,';')[1] == 'max' then
+			if tonumber(split(age,';')[3]) < utemp then
+				itempa[i] = true
+			else
+				itempa[i] = false
+			end
+			i = i + 1
+		end
+	end
+	for _,x in ipairs(rtempa) do
+		if x then required = true end
+	end
+	for _,x in ipairs(itempa) do
+		if x then immune = true end
+	end
+	if required and not immune then return false,itext end
+	if required and immune then return true,'NONE' end
+	if not required and immune then return false,rtext end
+	if not required and not immune then return false,rtext end
+end
+
+function checkAge(unit,array)
+	local rtempa,itempa,r,i,required,immune = {},{},1,1,false,false
+	local rtext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. ' is too young.'
+	local itext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. ' is too old.'
+	local tempa,utemp = split(array,','),dfhack.units.getAge(unit)
+	for _,x in ipairs(tempa) do
+		if split(x,';')[1] == 'min' then
+			if tonumber(split(x,';')[2]) > utemp then
+				rtempa[r] = true
+			else
+				rtempa[r] = false
+			end
+			r = r + 1
+		elseif split(x,';')[1] == 'max' then
+			if tonumber(split(x,';')[2]) < utemp then
+				itempa[i] = true
+			else
+				itempa[i] = false
+			end
+			i = i + 1
+		end
+	end
+	for _,x in ipairs(rtempa) do
+		if x then required = true end
+	end
+	for _,x in ipairs(itempa) do
+		if x then immune = true end
+	end
+	if required and not immune then return false,itext end
+	if required and immune then return true,'NONE' end
+	if not required and immune then return false,rtext end
+	if not required and not immune then return false,rtext end
+end
+
+function checkSpeed(unit,array)
+	local rtempa,itempa,r,i,required,immune = {},{},1,1,false,false
+	local rtext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. ' is too slow.'
+	local itext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. ' is too fast.'
+	local tempa,utemp = split(array,','),dfhack.units.computeMovementSpeed(unit)
+	for _,x in ipairs(tempa) do
+		if split(x,';')[1] == 'min' then
+			if tonumber(split(x,';')[2]) > utemp then
+				rtempa[r] = true
+			else
+				rtempa[r] = false
+			end
+			r = r + 1
+		elseif split(x,';')[1] == 'max' then
+			if tonumber(split(x,';')[2]) < utemp then
+				itempa[i] = true
+			else
+				itempa[i] = false
+			end
+			i = i + 1
+		end
+	end
+	for _,x in ipairs(rtempa) do
+		if x then required = true end
+	end
+	for _,x in ipairs(itempa) do
+		if x then immune = true end
+	end
+	if required and not immune then return false,itext end
+	if required and immune then return true,'NONE' end
+	if not required and immune then return false,rtext end
+	if not required and not immune then return false,rtext end
+end
+
+function checkProfession(unit,array)
+	local rtempa,itempa,r,i,required,immune = {},{},1,1,false,false
+	local rtext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. ' is not the required profession.'
+	local itext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. ' is an immune profession.'
+	local tempa,utemp = split(array,','),unit.profession
+	for _,x in ipairs(professiona) do
+		if split(x,';')[1] == 'required' then
+			if df.profession[split(x,';')[2]] == uprofession then
+				rtempa[r] = true
+			else
+				rtempa[r] = false
+			end
+			r = r + 1
+		elseif split(x,';')[1] == 'immune' then
+			if df.profession[split(x,';')[2]] == uprofession then
+				itempa[i] = true
+			else
+				itempa[i] = false
+			end
+			i = i + 1
+		end
+	end
+	for _,x in ipairs(rtempa) do
+		if x then required = true end
+	end
+	for _,x in ipairs(itempa) do
+		if x then immune = true end
+	end
+	if required and not immune then return true,'NONE' end
+	if required and immune then return false,itext end
+	if not required and immune then return false,itext end
+	if not required and not immune then return false,rtext end
+end
+
+function checkNoble(unit,array)
+	local rtempa,itempa,r,i,required,immune = {},{},1,1,false,false
+	local rtext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. ' does not hold the required position.'
+	local itext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. ' is holding an immune position.'
+	local tempa,utempa = split(array,','),dfhack.units.getNoblePositions(unit)
+	for _,x in ipairs(tempa) do
+		for _,y in ipairs(utempa) do
+			if split(x,';')[1] == 'required' then
+				if split(x,';')[2] == y.position.code then
+					rtempa[r] = true
+				else
+					rtempa[r] = false
+				end
+				r = r + 1
+			elseif split(x,';')[1] == 'immune' then
+				if split(x,';')[2] == y.position.code then
+					itempa[i] = true
+				else
+					itempa[i] = false
+				end
+				i = i + 1
+			end
+		end
+	end
+	for _,x in ipairs(rtempa) do
+		if x then required = true end
+	end
+	for _,x in ipairs(itempa) do
+		if x then immune = true end
+	end
+	if required and not immune then return true,'NONE' end
+	if required and immune then return false,itext end
+	if not required and immune then return false,itext end
+	if not required and not immune then return false,rtext end
+end
+
+function checkTypes(unit,class,creature,syndrome,token,immune)
+	local unitraws = df.creature_raw.find(unit.race)
+	local casteraws = unitraws.caste[unit.caste]
 	local unitracename = unitraws.creature_id
 	local castename = casteraws.caste_id
 	local unitclasses = casteraws.creature_class
-	local actives = unitTarget.syndromes.active
 	local syndromes = df.global.world.raws.syndromes.all
+	local actives = unit.syndromes.active
 	local flags1 = unitraws.flags
 	local flags2 = casteraws.flags
 	local tokens = {}
@@ -111,231 +402,263 @@ function isSelected(unit,unitTarget,args)
 	for k,v in pairs(flags2) do
 		tokens[k] = v
 	end
+	local tempa,ttempa,i,t,yes,no = {},{},1,1,false,false
+	local yestext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. ' is not an allowed type.'
+	local notext = 'Targeting failed, ' .. tostring(unit.name.first_name) .. ' is an immune type.' 
 
--- Distance Check
-	local pos = {dfhack.units.getPosition(unitTarget)}
-
-	local mapx, mapy, mapz = dfhack.maps.getTileSize()
-	local xmin = unit.pos.x - rx
-	local xmax = unit.pos.x + rx
-	local ymin = unit.pos.y - ry
-	local ymax = unit.pos.y + ry
-	local zmin = unit.pos.z - rz
-	local zmax = unit.pos.z + rz
-	if xmin < 1 then xmin = 1 end
-	if ymin < 1 then ymin = 1 end
-	if zmin < 1 then zmin = 1 end
-	if xmax > mapx then xmax = mapx-1 end
-	if ymax > mapy then ymax = mapy-1 end
-	if zmax > mapz then zmax = mapz-1 end
-
-	if pos[1] < xmin or pos[1] > xmax then return false end
-	if pos[2] < ymin or pos[2] > ymax then return false end
-	if pos[3] < zmin or pos[3] > zmax then return false end
-
--- Target Check	
-	if target == 'enemy' then
-		if unit.civ_id == unitTarget.civ_id then return false end
-	elseif target == 'civ' then
-		if unit.civ_id ~= unitTarget.civ_id then return false end
-	end
-
--- Age Check
-	if age ~= 'NONE' then
-		local uage = dfhack.units.getAge(unitTarget)
-		local agea = split(age,s3)
-		for _,x in ipairs(agea) do
-			if split(x,s2)[1] == 'min' then
-				if tonumber(split(x,s2)[2]) < uage then return false end
-			elseif split(x,s2)[1] == 'max' then
-				if tonumber(split(x,s2)[2]) > uage then return false end
+	if class ~= 'NONE' then
+		local classa = split(class,',')
+		for _,unitclass in ipairs(unitclasses) do
+			for _,x in ipairs(classa) do
+				if x == unitclass.value then
+					tempa[i] = true
+				else
+					tempa[i] = false
+				end
+				i = i + 1
 			end
 		end
 	end
-
--- Speed Check
-	if speed ~= 'NONE' then
-		local uspeed = dfhack.units.computeMovementSpeed(unitTarget)
-		local speeda = split(speed,s3)
-		for _,x in ipairs(speeda) do
-			if split(x,s2)[1] == 'min' then
-				if tonumber(split(x,s2)[2]) < uspeed then return false end
-			elseif split(x,s2)[1] == 'max' then
-				if tonumber(split(x,s2)[2]) > uspeed then return false end
+	if creature ~= 'NONE' then
+		local creaturea = split(creature,',')
+		for _,x in ipairs(creaturea) do
+			local xsplit = split(x,';')
+			print(xsplit[1],xsplit[2],unitracename,castename)
+			if xsplit[1] == unitracename and xsplit[2] == castename then
+				tempa[i] = true
+			else
+				tempa[i] = false
 			end
+			i = i + 1
 		end
 	end
-
--- Physical Attributes Check
-	if physical ~= 'NONE' then
-		local physicala = split(physical,s3)
-		for _,x in ipairs(physicala) do
-			local uphysical = getAttrValue(unitTarget,split(x,s2)[2])
-			if split(x,s2)[1] == 'min' then
-				if tonumber(split(age,s2)[3]) < uphysical then return false end
-			elseif split(x,s2)[1] == 'max' then
-				if tonumber(split(age,s2)[3]) > uphysical then return false end
-			end
-		end
-	end
-
--- Mental Attributes Check
-	if mental ~= 'NONE' then
-		local mentala = split(mental,s3)
-		for _,x in ipairs(mentala) do
-			local umental = getAttrValue(unitTarget,split(x,s2)[2],true)
-			if split(x,s2)[1] == 'min' then
-				if tonumber(split(age,s2)[3]) < umental then return false end
-			elseif split(x,s2)[1] == 'max' then
-				if tonumber(split(age,s2)[3]) > umental then return false end
-			end
-		end
-	end
-
--- Skill Level Check
-	if skills ~= 'NONE' then
-		local skilla = split(skills,s3)
-		for _,x in ipairs(skilla) do
-			local uskill = dfhack.units.getEffectiveSkill(unitTarget,df.job_skill[split(x,'/')[2]])
-			if split(x,s2)[1] == 'min' then
-				if tonumber(split(age,s2)[3]) < uskill then return false end
-			elseif split(x,s2)[1] == 'max' then
-				if tonumber(split(age,s2)[3]) > uskill then return false end
-			end
-		end
-	end
-
--- Noble Check
-	if noble ~= 'NONE' then
-		local noblea = split(noble,s3)
-		local unoblea = dfhack.units.getNoblePositions(unitTarget)
-		for _,x in ipairs(noblea) do
-			for _,y in ipairs(unoblea) do
-				if split(x,s2)[1] == 'required' then
-					if split(x,s2)[2] ~= y.position.code then return false end
-				elseif split(x,s2)[1] == 'immune' then
-					if split(x,s2)[2] == y.position.code then return false end
+	if syndrome ~= 'NONE' then
+		local syndromea = split(syndrome,',')
+		for _,x in ipairs(actives) do
+			local synclass=syndromes[x.type].syn_class
+			for _,y in ipairs(synclass) do
+				for _,z in ipairs(syndromea) do
+					if z == y.value then
+						tempa[i] = true
+					else
+						tempa[i] = false
+					end
+					i = i + 1
 				end
 			end
 		end
 	end
-
--- Profession Check
-	if profession ~= 'NONE' then
-		local professiona = split(profession,s3)
-		local uprofession = unitTarget.profession
-		for _,x in ipairs(professiona) do
-			print(split(x,s2)[2],uprofession)
-			if split(x,s2)[1] == 'required' then
-				if df.profession[split(x,s2)[2]] ~= uprofession then return false end
-			elseif split(x,s2)[1] == 'immune' then
-				if df.profession[split(x,s2)[2]] == uprofession then return false end
-			end
+	if token ~= 'NONE' then
+		local tokena = split(token,',')
+		for _,x in ipairs(tokena) do
+			ttempa[t] = tokens[x]
+			t = t + 1							
 		end
 	end
 
--- Trait Check
-	if traits ~= 'NONE' then
-		local traita = split(traits,s3)
-		local utraita = unitTarget.status.current_soul.traits
-		for _,x in ipairs(traita) do
-			for z,y in pairs(utraita) do
-				if split(x,s2)[2] == z then
-					if split(x,s2)[1] == 'min' then
-						if tonumber(split(x,s2)[3]) < y then return false end
-					elseif split(x,s2)[1] == 'max' then
-						if tonumber(split(x,s2)[3]) > y then return false end
+	for _,x in ipairs(tempa) do
+		if immune then
+			if x then no = true end
+		else
+			if x then yes = true end
+		end
+	end
+	for _,x in ipairs(ttempa) do
+		if immune then
+			if x then no = true end
+		else
+			if not x then 
+				yes = false
+				break
+			else
+				yes = true
+			end
+		end
+	end
+	if immune then
+		if no then return false,notext end
+	else
+		if not yes then return false,yestext end
+	end
+	return true,'NONE'
+end
+
+function isSelected(unitTarget,args)
+
+-- Identify casting unit
+	local unitSelf = getSelf()
+
+	local value = {radius = '-1,-1,-1',target = 'all',chain = 0,
+	aclass = 'NONE',acreature = 'NONE',asyndrome = 'NONE',atoken = 'NONE',
+	iclass = 'NONE',icreature = 'NONE',isyndrome = 'NONE',itoken = 'NONE',
+	physical = 'NONE',mental = 'NONE',skills = 'NONE',traits = 'NONE',age = 'NONE',speed = 'NONE',
+	noble = 'NONE',profession = 'NONE',entity = 'NONE',
+	reflect = 'NONE',silence = 'NONE',
+	self = false,verbose = false,los = true
+	}
+
+-- Arguments Analysis	
+	local temp = 'NONE'
+	for i = 1, #args, 1 do
+		if string.match(args[i],'@') ~= nil then
+			temp = split(args[i],'@')
+			value[temp[1]] = temp[2]
+		end
+	end
+
+	local output = {
+	caster = unitSelf,
+	verbose = value['verbose'],
+	}
+
+-- Self Check	
+	if value['self'] then
+		unitTarget = unitSelf
+	end
+
+-- Silence Check
+	if value['silence'] ~= 'NONE' then
+		local syndromes = df.global.world.raws.syndromes.all
+		local silencea = split(silence,',')
+		local sactives = unitSelf.syndromes.active
+		for _,x in ipairs(sactives) do
+			local ssynclass=syndromes[x.type].syn_class
+			for _,y in ipairs(ssynclass) do
+				for _,z in ipairs(silencea) do
+					if z == y.value then
+						output['selected'] = {false}
+						output['targets'] = {'NONE'}
+						output['announcement'] = {'Casting failed, ' .. tostring(unitSelf.name.first_name) .. ' is prevented from using the interaction.'}
+						return output 
 					end
 				end
 			end
 		end
 	end
 
--- Immune Creature Class Check
-	if iclass ~= 'NONE' then
-		local iclassa = split(iclass,s3)
-		for _,unitclass in ipairs(unitclasses) do
-			for _,x in ipairs(iclassa) do
-				if x == unitclass.value then return false end
-			end
-		end
-	end
+-- Distance Check
+	local selected,targetList,announcement = checkDistance(unitTarget,value['radius'],value['target'])	
 
--- Immune Creature/Caste Check	
-	if icreature ~= 'NONE' then
-		local icreaturea = split(icreature,s3)
-		for _,x in ipairs(icreaturea) do
-			local xsplit = split(x,s4)
-			if xsplit[1] == unitracename and xsplit[2] == castename then return false end
-		end
-	end
+-- Target Checks
+	for i = 1, #targetList, 1 do
+		local unitCheck = targetList[i]
 
--- Immune Syndrome Class Check	
-	if isyndrome ~= 'NONE' then
-		local isyndromea = split(isyndrome,s3)
-		for _,x in ipairs(actives) do
-			local synclass=syndromes[x.type].syn_class
-			for _,y in ipairs(synclass) do
-				for _,z in ipairs(isyndromea) do
-					if z == y.value then return false end
+-- Reflect Check
+		if value['reflect'] ~= 'NONE' then
+			local syndromes = df.global.world.raws.syndromes.all
+			local reflecta = split(reflect,',')
+			local actives = unitCheck.syndromes.active
+			for _,x in ipairs(actives) do
+				local rsynclass=syndromes[x.type].syn_class
+				for _,y in ipairs(rsynclass) do
+					for _,z in ipairs(reflecta) do
+						if z == y.value then 
+							targetList[i] = unitSelf
+							announcement[i] = tostring(unitCheck.name.first_name) .. ' reflects the interaction back towards ' .. tostring(unitSelf.name.first_name) .. '.'
+							unitCheck = unitSelf
+						end
+					end
 				end
 			end
 		end
-	end
 
--- Immune Creature Tokens Check	
-	if itoken ~= 'NONE' then
-		local itokena = split(itoken,s3)
-		for _,x in ipairs(itokena) do
-			if tokens[x] then return false end
+-- Age Check
+		if value['age'] ~= 'NONE' and selected[i] then
+			selected[i],announcement[i] = checkAge(unitCheck,value['age'])
 		end
-	end
 
-	if aclass == 'NONE' and acreature == 'NONE' and asyndrome == 'NONE' and atoken == 'NONE' then return true end
-
--- Required Creature Class Check	
-	if aclass ~= 'NONE' then
-		local aclassa = split(aclass,s3)
-		for _,unitclass in ipairs(unitclasses) do
-			for _,x in ipairs(aclassa) do
-				if x == unitclass.value then return true end
-			end
+-- Speed Check
+		if value['speed'] ~= 'NONE' and selected[i] then
+			selected[i],announcement[i] = checkSpeed(unitCheck,value['speed'])
 		end
-	end
 
--- Required Creature/Caste Check	
-	if acreature ~= 'NONE' then
-		local acreaturea = split(acreature,s3)
-		for _,x in ipairs(acreaturea) do
-			local xsplit = split(x,s4)
-			if xsplit[1] == unitracename and xsplit[2] == castename then return true end
+-- Physical Attributes Check
+		if value['physical'] ~= 'NONE' and selected[i] then
+			selected[i],announcement[i] = checkAttributes(unitCheck,value['physical'],false)
 		end
-	end
 
--- Required Syndrome Class Check	
-	if asyndrome ~= 'NONE' then
-		local asyndromea = split(asyndrome,s3)
-		for _,x in ipairs(actives) do
-			local synclass=syndromes[x.type].syn_class
-			for _,y in ipairs(synclass) do
-				for _,z in ipairs(asyndromea) do
-					if z == y.value then return true end
-				end
-			end
+-- Mental Attributes Check
+		if value['mental'] ~= 'NONE' and selected[i] then
+			selected[i],announcement[i] = checkAttributes(unitCheck,value['mental'],true)
 		end
-	end
 
--- Required Creature Tokens Check
-	if atoken ~= 'NONE' then
-		local atokena = split(atoken,s3)
-		for _,x in ipairs(atokena) do
-			if not tokens[x] then return false end
+-- Skill Level Check
+		if value['skills'] ~= 'NONE' and selected[i] then
+			selected[i],announcement[i] = checkSkills(unitCheck,value['skills'])
 		end
+
+-- Trait Check
+		if value['traits'] ~= 'NONE' and selected[i] then
+			selected[i],announcement[i] = checkTraits(unitCheck,value['traits'])
+		end
+
+-- Noble Check
+		if value['noble'] ~= 'NONE' and selected[i] then
+			selected[i],announcement[i] = checkNoble(unitCheck,value['noble'])
+		end
+
+-- Profession Check
+		if value['profession'] ~= 'NONE' and selected[i] then
+			selected[i],announcement[i] = checkProfession(unitCheck,value['profession'])
+		end
+
+-- Entity Check
+		if value['entity'] ~= 'NONE' and selected[i] then
+			selected[i],announcement[i] = checkEntity(unitCheck,value['entity'])
+		end
+
+-- Immune Check
+		if (value['iclass'] ~= 'NONE' or value['icreature'] ~= 'NONE' or value['isyndrome'] ~= 'NONE' or value['itoken'] ~= 'NONE') and selected[i] then
+			selected[i],announcement[i] = checkTypes(unitCheck,value['iclass'],value['icreature'],value['isyndrome'],value['itoken'],true)
+		end
+
+-- Required Check	
+		if (value['aclass'] ~= 'NONE' or value['acreature'] ~= 'NONE' or value['asyndrome'] ~= 'NONE' or value['atoken'] ~= 'NONE') and selected[i] then
+			selected[i],announcement[i] = checkTypes(unitCheck,value['aclass'],value['acreature'],value['asyndrome'],value['atoken'],true)
+		end
+
 	end
 
-	return false
+	return selected,targetList,unitSelf,value['verbose'],announcement
 end
 
-local unit = df.unit.find(args[1])
+local script = {chain=0,script='NONE',args='NONE'}
+local temp = 'NONE'
+for i = 1, #arg, 1 do
+	if string.match(arg[i],'@') ~= nil then
+		temp = split(arg[i],'@')
+		script[temp[1]] = temp[2]
+	end
+end
 
-isSelected(unit,unit,args)
+for count = 0, tonumber(script['chain']), 1 do
+	local unit = df.unit.find(arg[1])
+	if count > 0 then unit = targetList[math.random(1,#targetList)
+	local selected,targetList,unitSelf,verbose,announcement = isSelected(unit,arg)
+
+	local scripta = split(script['script'],',')
+	local argsa = split(script['args'],',')
+	for i,x in ipairs(scripta) do
+		for j,y in ipairs(targetList) do
+			if selected[j] then
+				local sargsa = split(argsa[i],';')
+				for k,z in ipairs(sargsa) do
+					if z == 'UNIT' then sargsa[k] = y.id end
+					if z == 'LOCATION' then sargsa[k] = y.pos end
+					if z == 'SELF' then sargsa[k] = unitSelf.id end
+				end
+				if #sargsa == 1 then dfhack.run_script(x,sargsa[1]) end
+				if #sargsa == 2 then dfhack.run_script(x,sargsa[1],sargsa[2]) end
+				if #sargsa == 3 then dfhack.run_script(x,sargsa[1],sargsa[2],sargsa[3]) end
+				if #sargsa == 4 then dfhack.run_script(x,sargsa[1],sargsa[2],sargsa[3],sargsa[4]) end
+				if #sargsa == 5 then dfhack.run_script(x,sargsa[1],sargsa[2],sargsa[3],sargsa[4],sargsa[5]) end
+				if #sargsa == 6 then dfhack.run_script(x,sargsa[1],sargsa[2],sargsa[3],sargsa[4],sargsa[5],sargsa[6]) end
+				if #sargsa == 7 then dfhack.run_script(x,sargsa[1],sargsa[2],sargsa[3],sargsa[4],sargsa[5],sargsa[6],sargsa[7]) end
+				if #sargsa == 8 then dfhack.run_script(x,sargsa[1],sargsa[2],sargsa[3],sargsa[4],sargsa[5],sargsa[6],sargsa[7],sargsa[8]) end
+				if #sargsa == 9 then dfhack.run_script(x,sargsa[1],sargsa[2],sargsa[3],sargsa[4],sargsa[5],sargsa[6],sargsa[7],sargsa[8],sargsa[9]) end
+				if #sargsa == 10 then dfhack.run_script(x,sargsa[1],sargsa[2],sargsa[3],sargsa[4],sargsa[5],sargsa[6],sargsa[7],sargsa[8],sargsa[9],sargsa[10]) end
+			end
+		end
+	end
+end
+

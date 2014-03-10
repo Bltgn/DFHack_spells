@@ -1,0 +1,38 @@
+Plans for future scripts/changes:
+
+teleport.lua
+-New type, liquid
+-New direction, meeting
+-New direction, room
+-New direction, idle
+-New direction, building
+
+imbueweapon.lua
+-Allow armor
+-Allow ammo
+
+propel.lua
+-Fix type, relative
+
+changebody.lua
+-New type, material
+-New type, size
+-New type, thickness
+-Add duration
+
+changeattributes.lua
+-Add duration
+
+changevalues.lua
+-Add duration
+
+changeskills.lua
+-Add duration
+
+changetraits.lua
+-Add duration
+
+changetile.lua
+-New type, temperature
+-New type, material
+-Add duration

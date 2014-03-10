@@ -1,40 +1,3 @@
-
---[[
-Description: Causes an "eruption" of water or magma under a creature with a specified radius and a specified height.
-
-Use: 
-[SYN_CLASS:\COMMAND]
-[SYN_CLASS:eruption]
-[SYN_CLASS:type]
-[SYN_CLASS:\UNIT_ID]
-[SYN_CLASS:radius]
-[SYN_CLASS:depth]
-
-type = type of liquid created (VALID TOKENS: magma, water)
-radius = x,y,z extent of the spawned liquid (VALID TOKEN: INTEGER[0 - mapsize])
-depth =  amount of liquid created at center, falls off as you move away from the center to 1 at the max radius (VALID TOKENS: INTEGER[1 - 7])
-
-Example: 
-Code: [Select]
-[INTERACTION:SPELL_ELEMENTAL_FIRE_VOLCANO]
-	[I_SOURCE:CREATURE_ACTION]
-	[I_TARGET:C:CREATURE]
-		[IT_LOCATION:CONTEXT_CREATURE]
-		[IT_MANUAL_INPUT:target]
-	[I_EFFECT:ADD_SYNDROME]
-		[IE_TARGET:C]
-		[IE_IMMEDIATE]
-		[SYNDROME]
-			[SYN_CLASS:\COMMAND]
-			[SYN_CLASS:eruption]
-			[SYN_CLASS:magma]
-			[SYN_CLASS:\UNIT_ID]
-			[SYN_CLASS:4,0,0]
-			[SYN_CLASS:7]
-			[CE_SPEED_CHANGE:SPEED_PERC:100:START:0:END:1]
-
-]]
-
 args={...}
 
 function split(str, pat)
@@ -59,7 +22,7 @@ end
 function eruption(etype,unit,radius,depth)
 	local i
 	local rando = dfhack.random.new()
-	local radiusa = split(radius,',')
+	local radiusa = split(radius,'/')
 	local rx = tonumber(radiusa[1])
 	local ry = tonumber(radiusa[2])
 	local rz = tonumber(radiusa[3])
@@ -70,6 +33,7 @@ function eruption(etype,unit,radius,depth)
 	local ymin = unit.pos.y - ry
 	local ymax = unit.pos.y + ry
 	local zmax = unit.pos.z + rz
+	local zmin = unit.pos.z
 	if xmin < 1 then xmin = 1 end
 	if ymin < 1 then ymin = 1 end
 	if xmax > mapx then xmax = mapx-1 end
@@ -78,8 +42,10 @@ function eruption(etype,unit,radius,depth)
 
 	local dx = xmax - xmin
 	local dy = ymax - ymin
+	local dz = zmax - zmin
 	local hx = 0
 	local hy = 0
+	local hz = 0
 
 	if dx == 0 then
 		hx = depth
@@ -93,14 +59,20 @@ function eruption(etype,unit,radius,depth)
 		hy = depth/dy
 	end
 
+	if dz == 0 then
+		hz = depth
+	else
+		hz = depth/dz
+	end
+
 	for i = xmin, xmax, 1 do
 		for j = ymin, ymax, 1 do
-			for k = unit.pos.z, zmax, 1 do
-				if (math.abs(i-unit.pos.x) + math.abs(j-unit.pos.y)) <= math.sqrt(rx*rx+ry*ry) then
+			for k = zmin, zmax, 1 do
+				if (math.abs(i-unit.pos.x) + math.abs(j-unit.pos.y) + math.abs(k-unit.pos.z)) <= math.sqrt(rx*rx+ry*ry+rz*rz) then
 					block = dfhack.maps.ensureTileBlock(i,j,k)
 					dsgn = block.designation[i%16][j%16]
 					if not dsgn.hidden then
-						size = math.floor(depth-hx*math.abs(unit.pos.x-i)-hy*math.abs(unit.pos.y-j))
+						size = math.floor(depth-hx*math.abs(unit.pos.x-i)-hy*math.abs(unit.pos.y-j)-hz*math.abs(unit.pos.z-k))
 						if size < 1 then size = 1 end
 						dsgn.flow_size = size
 						if etype == 'magma' then
