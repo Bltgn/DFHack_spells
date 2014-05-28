@@ -1,3 +1,30 @@
+--changeattributes.lua v1.0
+--[[
+changeattributes - will change a units physical or mental attributes
+	type
+		mental - specifies that the change is to a mental attribute
+		physical - specifies that the change is to a physical attribute
+	ATTRIBUTE_TOKEN - attribute to change, separate multiple tokens with ‘+’
+		valid tokens found here
+	ID # - the units id number
+		\UNIT_ID - when triggering with a syndrome
+		\WORKER_ID - when triggering with a reaction
+	change type - the type of change to make, separate multiple types with ‘+’ (must have same number of types as attribute tokens)
+		percent - adjust the units attributes by a specified percent
+		fixed - add a specific amount to the units attributes
+		set - set the units attributes to the given strength
+	strength - the amount to change by, separate multiple strengths with ‘+’ (must have same number of strengths as attribute tokens)
+		#
+			Equation for percent: value = value*(100+strength)/100
+			Equation for fixed: value = value + strength
+			Equation for set: value = strength
+	(OPTIONAL) duration - sets a specified length of time for the changes to last (in in-game ‘ticks’)
+		#
+			DEFAULT: 0 - attribute changes will be permanent
+			NOTE: Will set attributes back to previous value after effect wears off, this may interfere with other attribute changing syndromes.
+EXAMPLE: changeattributes physical STRENGTH+ENDURANCE+AGILITY \UNIT_ID fixed+fixed+percent 500+500+-50 3600
+--]]
+
 args={...}
 
 function split(str, pat)
@@ -19,252 +46,64 @@ function split(str, pat)
    return t
 end
 
-local function effect(etype,unitTarget,ctype,strength)
-	local i
+function createcallback(etype,mental,unitTarget,ctype,strength,save)
+	return function(reseteffect)
+		effect(etype,mental,unitTarget,ctype,strength,save,-1)
+	end
+end
+
+function effect(etype,mental,unitTarget,ctype,strength,save,dir)
 	local value = 0
 	local int16 = 30000
 	local int32 = 200000000
 
-	if ctype == 'fixed' then
-		if etype == 'strength' or etype == 'all' or etype == 'physical' then
-			value = unitTarget.body.physical_attrs.STRENGTH + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.body.physical_attrs.STRENGTH = value
+	if mental == 'physical' then
+		if dir == 1 then save = unitTarget.body.physical_attrs[etype].value end
+		value = unitTarget.body.physical_attrs[etype].value
+		if ctype == 'fixed' then
+			value = value + strength
+		elseif ctype == 'percent' then
+			local percent = (100+strength)/100
+			value = value*percent
+		elseif ctype == 'set' then
+			value = strength
 		end
-		if etype == 'agility' or etype == 'all' or etype == 'physical' then
-			value = unitTarget.body.physical_attrs.AGILITY + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.body.physical_attrs.AGILITY = value
+		if value > int16 then value = int16 end
+		if value < 0 then value = 0 end
+		if dir == -1 then value = save end
+		unitTarget.body.physical_attrs[etype].value = value
+	elseif mental == 'mental' then
+		if dir == 1 then save = unitTarget.status.current_soul.mental_attrs[etype].value end
+		value = unitTarget.status.current_soul.mental_attrs[etype].value
+		if ctype == 'fixed' then
+			value = value + strength
+		elseif ctype == 'percent' then
+			local percent = (100+strength)/100
+			value = value*percent
+		elseif ctype == 'set' then
+			value = strength
 		end
-		if etype == 'endurance' or etype == 'all' or etype == 'physical' then
-			value = unitTarget.body.physical_attrs.ENDURANCE + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.body.physical_attrs.ENDURANCE = value
-		end
-		if etype == 'toughness' or etype == 'all' or etype == 'physical' then
-			value = unitTarget.body.physical_attrs.TOUGHNESS + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.body.physical_attrs.TOUGHNESS = value
-		end
-		if etype == 'resistance' or etype == 'all' or etype == 'physical' then
-			value = unitTarget.body.physical_attrs.DISEASE_RESISTANCE + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.body.physical_attrs.DISEASE_RESISTANCE = value
-		end
-		if etype == 'recuperation' or etype == 'all' or etype == 'physical' then
-			value = unitTarget.body.physical_attrs.RECUPERATION + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.body.physical_attrs.RECUPERATION = value
-		end
-		if etype == 'analytical' or etype =='all' or etype == 'mental' then
-			value = unitTarget.status.current_soul.mental_attrs.ANALYTICAL_ABILITY + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.ANALYTICAL_ABILITY = value
-		end
-		if etype == 'focus' or etype =='all' or etype == 'mental' then
-			value = unitTarget.status.current_soul.mental_attrs.FOCUS + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.FOCUS = value
-		end
-		if etype == 'wlllpower' or etype =='all' or etype == 'mental' then
-			value = unitTarget.status.current_soul.mental_attrs.WILLPOWER + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.WILLPOWER = value
-		end
-		if etype == 'creativity' or etype =='all' or etype == 'mental' then
-			value = unitTarget.status.current_soul.mental_attrs.CREATIVITY + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.CREATIVITY = value
-		end
-		if etype == 'intuition' or etype =='all' or etype == 'mental' then
-			value = unitTarget.status.current_soul.mental_attrs.INTUITION + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.INTUITION = value
-		end
-		if etype == 'patience' or etype =='all' or etype == 'mental' then
-			value = unitTarget.status.current_soul.mental_attrs.PATIENCE + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.PATIENCE = value
-		end
-		if etype == 'memory' or etype =='all' or etype == 'mental' then
-			value = unitTarget.status.current_soul.mental_attrs.MEMORY + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.MEMORY = value
-		end
-		if etype == 'linguistic' or etype =='all' or etype == 'mental' then
-			value = unitTarget.status.current_soul.mental_attrs.LINGUISTIC_ABILITY + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.LINGUISTIC_ABILITY = value
-		end
-		if etype == 'spatial' or etype =='all' or etype == 'mental' then
-			value = unitTarget.status.current_soul.mental_attrs.SPATIAL_SENSE + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.SPATIAL_SENSE = value
-		end
-		if etype == 'musicality' or etype =='all' or etype == 'mental' then
-			value = unitTarget.status.current_soul.mental_attrs.MUSICALITY + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.MUSICALITY = value
-		end
-		if etype == 'kinesthetic' or etype =='all' or etype == 'mental' then
-			value = unitTarget.status.current_soul.mental_attrs.KINESTHETIC_SENSE + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.KINESTHETIC_SENSE = value
-		end
-		if etype == 'empathy' or etype =='all' or etype == 'mental' then
-			value = unitTarget.status.current_soul.mental_attrs.EMPATHY + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.EMPATHY = value
-		end
-		if etype == 'social' or etype =='all' or etype == 'mental' then
-			value = unitTarget.status.current_soul.mental_attrs.SOCIAL_AWARENESS + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.SOCIAL_AWARENESS = value
-		end
-	elseif ctype == 'percent' then
-		local percent = (100+strength)/100
-		if etype == 'strength' or etype == 'all' or etype == 'physical' then
-			value = math.floor(unitTarget.body.physical_attrs.STRENGTH*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.body.physical_attrs.STRENGTH = value
-		end
-		if etype == 'agility' or etype == 'all' or etype == 'physical' then
-			value = math.floor(unitTarget.body.physical_attrs.AGILITY*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.body.physical_attrs.AGILITY = value
-		end
-		if etype == 'endurance' or etype == 'all' or etype == 'physical' then
-			value = math.floor(unitTarget.body.physical_attrs.ENDURANCE*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.body.physical_attrs.ENDURANCE = value
-		end
-		if etype == 'toughness' or etype == 'all' or etype == 'physical' then
-			value = math.floor(unitTarget.body.physical_attrs.TOUGHNESS*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.body.physical_attrs.TOUGHNESS = value
-		end
-		if etype == 'resistance' or etype == 'all' or etype == 'physical' then
-			value = math.floor(unitTarget.body.physical_attrs.DISEASE_RESISTANCE*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.body.physical_attrs.DISEASE_RESISTANCE = value
-		end
-		if etype == 'recuperation' or etype == 'all' or etype == 'physical' then
-			value = math.floor(unitTarget.body.physical_attrs.RECUPERATION*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.body.physical_attrs.RECUPERATION = value
-		end
-		if etype == 'analytical' or etype =='all' or etype == 'mental' then
-			value = math.floor(unitTarget.status.current_soul.mental_attrs.ANALYTICAL_ABILITY*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.ANALYTICAL_ABILITY = value
-		end
-		if etype == 'focus' or etype =='all' or etype == 'mental' then
-			value = math.floor(unitTarget.status.current_soul.mental_attrs.FOCUS*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.FOCUS = value
-		end
-		if etype == 'wlllpower' or etype =='all' or etype == 'mental' then
-			value = math.floor(unitTarget.status.current_soul.mental_attrs.WILLPOWER*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.WILLPOWER = value
-		end
-		if etype == 'creativity' or etype =='all' or etype == 'mental' then
-			value = math.floor(unitTarget.status.current_soul.mental_attrs.CREATIVITY*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.CREATIVITY = value
-		end
-		if etype == 'intuition' or etype =='all' or etype == 'mental' then
-			value = math.floor(unitTarget.status.current_soul.mental_attrs.INTUITION*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.INTUITION = value
-		end
-		if etype == 'patience' or etype =='all' or etype == 'mental' then
-			value = math.floor(unitTarget.status.current_soul.mental_attrs.PATIENCE*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.PATIENCE = value
-		end
-		if etype == 'memory' or etype =='all' or etype == 'mental' then
-			value = math.floor(unitTarget.status.current_soul.mental_attrs.MEMORY*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.MEMORY = value
-		end
-		if etype == 'linguistic' or etype =='all' or etype == 'mental' then
-			value = math.floor(unitTarget.status.current_soul.mental_attrs.LINGUISTIC_ABILITY*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.LINGUISTIC_ABILITY = value
-		end
-		if etype == 'spatial' or etype =='all' or etype == 'mental' then
-			value = math.floor(unitTarget.status.current_soul.mental_attrs.SPATIAL_SENSE*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.SPATIAL_SENSE = value
-		end
-		if etype == 'musicality' or etype =='all' or etype == 'mental' then
-			value = math.floor(unitTarget.status.current_soul.mental_attrs.MUSICALITY*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.MUSICALITY = value
-		end
-		if etype == 'kinesthetic' or etype =='all' or etype == 'mental' then
-			value = math.floor(unitTarget.status.current_soul.mental_attrs.KINESTHETIC_SENSE*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.KINESTHETIC_SENSE = value
-		end
-		if etype == 'empathy' or etype =='all' or etype == 'mental' then
-			value = math.floor(unitTarget.status.current_soul.mental_attrs.EMPATHY*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.EMPATHY = value
-		end
-		if etype == 'social' or etype =='all' or etype == 'mental' then
-			value = math.floor(unitTarget.status.current_soul.mental_attrs.SOCIAL_AWARENESS*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.status.current_soul.mental_attrs.SOCIAL_AWARENESS = value
-		end
+		if value > int16 then value = int16 end
+		if value < 0 then value = 0 end
+		if dir == -1 then value = save end
+		unitTarget.status.current_soul.mental_attrs[etype].value = value
 	end
+	return save
 end
 
-local types = args[1]
-local unit = df.unit.find(tonumber(args[2]))
-local ctype = args[3]
-local strengtha = split(args[4],'/')
-local typea = split(types,'/')
+local types = args[2]
+local mental = args[1]
+local unit = df.unit.find(tonumber(args[3]))
+local ctype = args[4]
+local strengtha = split(args[5],'+')
+local typea = split(types,'+')
+local ctypea = split(ctype,'+')
+local dur = 0
+if #args == 6 then dur = tonumber(args[6]) end
 
 for i,etype in ipairs(typea) do
-	effect(etype,unit,ctype,tonumber(strengtha[i]))
+	save = effect(etype,mental,unit,ctypea[i],tonumber(strengtha[i]),0,1)
+	if dur > 0 then
+		dfhack.timeout(dur,'ticks',createcallback(etype,mental,unit,ctypea[i],tonumber(strengtha[i]),save))
+	end
 end

@@ -1,3 +1,37 @@
+--spawnflow.lua v1.0
+--[[
+spawnflow - cause a flow to be spawned with specific properties
+	type - the type of flow to spawn
+		miasma
+		mist
+		mist2
+		dust
+		lavamist
+		smoke
+		dragonfire
+		firebreath
+		web
+		undirectedgas
+		undirectedvapor
+		oceanwave
+		seafoam
+	ID # - the target units id number
+		\UNIT_ID - when triggering with a syndrome
+		\WORKER_ID - when triggering with a reaction
+	radius - the distance around the target the flow is spawned randomly
+		#
+		NOTE: To just spawn the flow on the unit itself set radius = 0
+	number - the number of flows to spawn
+		#
+		NOTE: If radius =! 0 then each flow will be spawned in a random place in the radius
+	size - the size of each flow spawned
+		#
+	(OPTIONAL) INORGANIC_TOKEN - the inorganic the flow should be made from
+		Any inorganic token
+		NOTE: This only applies to some of the types of flows, you can’t, for instance, make an IRON dragonfire
+EXAMPLES: spawnflow web \UNIT_ID 25 10 20 SPIDER_STEEL
+--]]
+
 args={...}
 
 flowtypes = {
@@ -67,7 +101,7 @@ local radius = tonumber(args[3])
 local number = tonumber(args[4])
 local strength = tonumber(args[5])
 local itype = 0
-if #args > 5 then
+if #args == 6 then
 	itype = args[6]
 end
 

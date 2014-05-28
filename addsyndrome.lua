@@ -1,3 +1,14 @@
+--addsyndrome.lua v1.0
+--[[	
+addsyndrome - adds a syndrome, from a specified inorganic, to a unit
+	INORGANIC - the ID of the inorganic where your syndrome is defined
+		Any inorganic’s ID
+	ID # - the units id number
+		\UNIT_ID - when triggering with a syndrome
+		\WORKER_ID - when triggering with a reaction
+EXAMPLE: addsyndrome SYNDROME_STONE_PLAGUE \UNIT_ID
+--]]
+
 args={...}
 
 local function alreadyHasSyndrome(unit,syn_id) --taken from Putnam's itemSyndrome

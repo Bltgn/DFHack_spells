@@ -1,3 +1,22 @@
+--propel.lua v1.0
+--[[
+propel - cause a unit to be propelled as a projectile with a certain velocity
+	type - the method for computing units velocity
+		random - throws the unit in a random direction
+		fixed - throws the unit in a fixed direction
+		relative**,****** - throws the unit in a direction relative to the origin unit
+	ID # - the target units id number
+		\UNIT_ID - when triggering with a syndrome
+		\WORKER_ID - when triggering with a reaction
+	strength - the force to propel the unit in x, y, and z
+		#/#/#
+			Equation for random = random[-1,1]*strength
+			Equation for fixed = strength
+			Equation for relative = strength*(targetpos - sourcepos)/abs(targetpos-sourcepos)
+	(OPTIONAL) ID # - the origin units id number, required for the relative propel type
+EXAMPLE: propel random \UNIT_ID 50/50/0
+--]]
+
 args={...}
 
 local function split(str, pat)
@@ -19,7 +38,7 @@ local function split(str, pat)
    return t
 end
 
-local function propel(ptype,unitTarget,strength)
+local function propel(ptype,unitTarget,strength,unitSource)
 	local strengtha = split(strength,'/')
 	local sx = tonumber(strengtha[1])
 	local sy = tonumber(strengtha[2])
@@ -27,7 +46,26 @@ local function propel(ptype,unitTarget,strength)
 	local dx = 1
 	local dy = 1
 	local dz = 1
-
+	local rando = dfhack.random.new()
+	
+	if unitSource ~= 0 then
+		if unitTarget.pos.x - unitSource.pos.x ~= 0 then
+			dx = (unitTarget.pos.x - unitSource.pos.x)/math.abs(unitTarget.pos.x - unitSource.pos.x)
+		else
+			dx = rando:random(3) - 1
+		end
+		if unitTarget.pos.y - unitSource.pos.y ~= 0  then
+			dy = (unitTarget.pos.y - unitSource.pos.y)/math.abs(unitTarget.pos.y - unitSource.pos.y)
+		else
+			dy = rando:random(3) - 1
+		end
+		if unitTarget.pos.z - unitSource.pos.z ~= 0 then
+			dz = (unitTarget.pos.z - unitSource.pos.z)/math.abs(unitTarget.pos.z - unitSource.pos.z)
+		else
+			dz = rando:random(3) - 1
+		end
+	end
+	
 	local count=0
 	local l = df.global.world.proj_list
 	local lastlist=l
@@ -41,7 +79,6 @@ local function propel(ptype,unitTarget,strength)
 	end
 
 	if ptype == 'random' then
-		rando = dfhack.random.new()
 		rollx = rando:unitrandom()*sx
 		rolly = rando:unitrandom()*sy
 		rollz = rando:unitrandom()*sz
@@ -99,5 +136,7 @@ end
 local ptype = args[1]
 local unit = df.unit.find(tonumber(args[2]))
 local strength = args[3]
+local unitSource = 0
+if #args = 4 then unitSource = df.unit.find(tonumber(args[4])) end
 
-propel(ptype,unit,strength)
+propel(ptype,unit,strength,unitSource)

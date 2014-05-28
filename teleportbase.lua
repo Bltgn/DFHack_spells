@@ -1,3 +1,7 @@
+--teleportbase.lua v1.0
+-- MUST BE LOADED IN DFHACK.INIT
+--	Use with teleport.lua
+-- Requires two buildings named TELEPORT_! and TELEPORT_2
 
 events = require "plugins.eventful"
 events.enableEvent(events.eventType.BUILDING,100)

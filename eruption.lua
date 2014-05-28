@@ -1,3 +1,20 @@
+--eruption.lua v1.0
+--[[
+eruption - cause water or magma to be spawned in a certain area and height
+	type - what to spawn
+		water - spawns water
+		magma - spawns magma
+	ID # - the units id number
+		\UNIT_ID - when triggering with a syndrome
+		\WORKER_ID - when triggering with a reaction
+	radius - the x, y, and z extent for the liquid to be spawned
+		#/#/# - 0/0/0 corresponds to just the tile the unit is on, 10/0/0 would be 10 tiles in the x direction to either side of the unit
+	depth - the amount of liquid in the center tile (i.e. #/7)
+		#
+		NOTE: The depth will fall off as you move away from the center of the spawn
+EXAMPLE: eruption magma \UNIT_ID 5/5/5 7
+--]]
+
 args={...}
 
 function split(str, pat)

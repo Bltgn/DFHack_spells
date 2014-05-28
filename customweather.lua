@@ -1,3 +1,37 @@
+--customweather.lua v1.0
+--[[
+customweather - cause custom flows to be spawned on the map, simulating weather
+	type - the type of flow to spawn
+		miasma
+		mist
+		mist2
+		dust
+		lavamist
+		smoke
+		dragonfire
+		firebreath
+		web
+		undirectedgas
+		undirectedvapor
+		oceanwave
+		seafoam
+	number - the number of flows to spawn at each time step
+		#
+		NOTE: These will be randomized across the entire map
+	size - the size of the flows to spawn
+		#
+	frequency - how often (in in-game ticks) to trigger the flows
+		#
+		NOTE: Setting this too small will have noticeable impact on your fps, I suggest >500
+	duration - how long for the weather to last
+		#
+		This means that the total number of flows that will be spawned is (duration/frequency)*number
+	(OPTIONAL) INORGANIC_TOKEN - the inorganic the flow should be made from
+		Any inorganic token
+		NOTE: This only applies to some of the types of flows, you can’t, for instance, make an IRON dragonfire
+EXAMPLE: customweather firebreath 50 25 1000 7200
+--]]
+
 args={...}
 
 flowtypes = {
@@ -16,9 +50,9 @@ oceanwave = 11,
 seafoam = 12
 }
 
-function weather3(stype,number,itype,strength,duration)
+function weather3(stype,number,itype,strength,frequency)
 	if weathercontinue then
-		dfhack.timeout(1000,'ticks',weather(stype,number,itype,strength))
+		dfhack.timeout(frequency,'ticks',weather(stype,number,itype,strength,frequency))
 	else
 		return
 	end
@@ -30,7 +64,7 @@ function weather2(cbid)
 	end
 end
 
-function weather(stype,number,itype,strength,duration)
+function weather(stype,number,itype,strength,frequency)
 	return function (startweather)
 		local i
 		local rando = dfhack.random.new()
@@ -69,20 +103,21 @@ function weather(stype,number,itype,strength,duration)
 			pos.z = pos.z + j
 			dfhack.maps.spawnFlow(pos,snum,0,inum,strength)
 		end
-		weather3(stype,number,itype,strength)
+		weather3(stype,number,itype,strength,frequency)
 	end
 end
 
 local stype = args[1]
 local number = tonumber(args[2])
 local strength = tonumber(args[3])
-local duration = tonumber(args[4])
+local duration = tonumber(args[5])
+local frequency = tonumber(args[4])
 local itype = 0
-if #args > 4 then
-	itype = args[5]
+if #args == 6 then
+	itype = args[6]
 end
 local test = 'abc'
 weathercontinue = true
 
-dfhack.timeout(1,'ticks',weather(stype,number,itype,strength))
+dfhack.timeout(1,'ticks',weather(stype,number,itype,strength,frequency))
 dfhack.timeout(duration,'ticks',weather2(test))

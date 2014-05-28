@@ -1,38 +1,45 @@
+addsyndrome.lua		v1.0
+changeattributes.lua	v1.0
+changebody.lua		v1.0
+changeboolean.lua	v1.0
+changeskills.lua	v1.0
+changetile.lua		v1.0
+changetraits.lua	v1.0
+changevalues.lua	v1.0
+counters.lua		v1.0
+countersbase.lua	v0.0
+createitem.lua		v1.0
+customweather.lua	v1.0
+eruption.lua		v1.0
+imbueitem.lua		v1.0
+projectile.lua		v1.0
+propel.lua		v1.0
+spawnflow.lua		v1.0
+teleport.lua		v1.0
+teleportbase.lua	v1.0
+upgradebuilding.lua	v1.0
+upgradeitem.lua		v1.0
+wrapper.lua		v1.0
+
+
 Plans for future scripts/changes:
 
 teleport.lua
 -New type, liquid
--New direction, meeting
--New direction, room
--New direction, idle
--New direction, building
-
-imbueweapon.lua
--Allow armor
--Allow ammo
-
-propel.lua
--Fix type, relative
 
 changebody.lua
 -New type, material
 -New type, size
 -New type, thickness
--Add duration
 
-changeattributes.lua
--Add duration
+wrapper.lua
+-Add LOS check
 
-changevalues.lua
--Add duration
+createitem.lua
+-New location, inventory
 
-changeskills.lua
--Add duration
+changeboolean.lua
+-Figure out the crashes
 
-changetraits.lua
--Add duration
-
-changetile.lua
--New type, temperature
--New type, material
--Add duration
+countersbase.lua
+-Add kill counter

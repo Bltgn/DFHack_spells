@@ -1,3 +1,27 @@
+--changevalues.lua v1.0
+--[[
+changevalues - will change a series of unit values (like stun, paralysis, hunger timer, etc…)
+	VALUE_TOKEN - value to change, separate multiple tokens with ‘+’
+		valid tokens found here
+	ID # - the units id number
+		\UNIT_ID - when triggering with a syndrome
+		\WORKER_ID - when triggering with a reaction
+	change type - the type of change to make, separate multiple types with ‘+’ (must have same number of types as trait tokens)
+		percent - adjust the units values by a specified percent
+		fixed - add a specific amount to the units values
+		set - set the units values to the given strength
+	strength - the amount to change by, separate multiple strengths with ‘+’ (must have same number of strengths as skill tokens)
+		#
+			Equation for percent: value = value*(100+strength)/100
+			Equation for fixed: value = value + strength
+			Equation for set: value = strength
+	(OPTIONAL) duration - sets a specified length of time for the changes to last (in in-game ‘ticks’)
+		#
+			DEFAULT: 0 - value changes will be permanent
+			NOTE: Will set values back to previous value after effect wears off, any natural changes during the change will be reverted..
+EXAMPLE: changevalues webbed+blood \UNIT_ID set+percent 1000+-20 3600
+--]]
+
 args={...}
 
 function split(str, pat)
@@ -19,216 +43,99 @@ function split(str, pat)
    return t
 end
 
-local function effect(etype,unitTarget,ctype,strength)
-	local i
+function createcallback(etype,unitTarget,ctype,strength,save)
+	return function(reseteffect)
+		effect(etype,unitTarget,ctype,strength,save,-1)
+	end
+end
+
+function effect(e,unitTarget,ctype,strength,save,dir)
 	local value = 0
+	local t = 0
 	local int16 = 30000
 	local int32 = 200000000
+	if (e == 'webbed' or e == 'stunned' or e == 'winded' or e == 'unconscious' or e == 'pain'
+		or e == 'nausea' or e == 'dizziness') then t = 1 end
+	if (e == 'paralysis' or e == 'numbness' or e == 'fever' or e == 'exhaustion' 
+		or e == 'hunger' or e == 'thirst' or e == 'sleepiness') then t = 2 end
+	if e == 'blood' then t = 3 end
+	if e == 'infection' then t = 4 end
+	if (e == 'hunger' or e == 'thirst' or e == 'sleepiness') then e = e .. '_timer' end
 
-	if ctype == 'fixed' then
-		if etype == 'web' or etype =='all' then
-			value = unitTarget.counters.webbed + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.webbed = value
+	if t == 1 then
+		value = unitTarget.counters[e]
+		if dir == 1 then save = value end
+		if ctype == 'fixed' then
+			value = value + strength
+		elseif ctype == 'percent' then
+			local percent = (100+strength)/100
+			value = math.floor(value*percent)
+		elseif ctype == 'set' then
+			value = strength
 		end
-		if etype == 'stun' or etype =='all' then
-			value = unitTarget.counters.stunned + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.stunned = value
+		if value > int16 then value = int16 end
+		if value < 0 then value = 0 end
+		if dir == -1 then value = save end
+		unitTarget.counters[e] = value
+	elseif t == 2 then
+		value = unitTarget.counters2[e]
+		if dir == 1 then save = value end
+		if ctype == 'fixed' then
+			value = value + strength
+		elseif ctype == 'percent' then
+			local percent = (100+strength)/100
+			value = math.floor(value*percent)
+		elseif ctype == 'set' then
+			value = strength
 		end
-		if etype == 'winded' or etype =='all' then 
-			value = unitTarget.counters.winded + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.winded = value
+		if value > int16 then value = int16 end
+		if value < 0 then value = 0 end
+		if dir == -1 then value = save end
+		unitTarget.counters2[e] = value
+	elseif t == 3 then
+		if dir == 1 then save = value end
+		if ctype == 'fixed' then
+			value = value + strength
+		elseif ctype == 'percent' then
+			local percent = (100+strength)/100
+			value = math.floor(value*percent)
+		elseif ctype == 'set' then
+			value = strength
 		end
-		if etype == 'unconscious' or etype =='all' then 
-			value = unitTarget.counters.unconscious + strength
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.unconscious = value
+		if value > unitTarget.body.blood_max then value = unitTarget.body.blood_max end
+		if value < 0 then value = 0 end
+		unitTarget.body.blood_count = value
+	elseif t == 4 then
+		value = unitTarget.body.infection_level
+		if dir == 1 then save = value end
+		if ctype == 'fixed' then
+			value = value + strength
+		elseif ctype == 'percent' then
+			local percent = (100+strength)/100
+			value = math.floor(value*percent)
+		elseif ctype == 'set' then
+			value = strength
 		end
-		if etype == 'pain' or etype =='all' then 
-			value = unitTarget.counters.pain + strength
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.pain = value
-		end
-		if etype == 'nausea' or etype =='all' then 
-			value = unitTarget.counters.nausea + strength
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.nausea = value
-		end
-		if etype == 'dizziness' or etype =='all' then 
-			value = unitTarget.counters.dizziness + strength
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.dizziness = value
-		end
-		if etype == 'paralysis' or etype =='all' then 
-			value = unitTarget.counters.paralysis + strength
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.paralysis = value
-		end
-		if etype == 'numbness' or etype =='all' then 
-			value = unitTarget.counters.numbness + strength
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.numbness = value
-		end
-		if etype == 'fever' or etype =='all' then 
-			value = unitTarget.counters.fever + strength
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.fever = value
-		end
-		if etype == 'exhaustion' or etype =='all' then 
-			value = unitTarget.counters.exhaustion + strength
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.exhaustion = value
-		end
-		if etype == 'hunger' or etype =='all' then 
-			value = unitTarget.counters.hunger_timer + strength
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.hunger_timer = value
-		end
-		if etype == 'thirst' or etype =='all' then 
-			value = unitTarget.counters.thirst_timer + strength
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.thirst_timer = value
-		end
-		if etype == 'sleep' or etype =='all' then 
-			value = unitTarget.counters.sleepiness_timer + strength
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.sleepiness_timer = value
-		end
-		if etype == 'infection' or etype =='all' then 
-			value = unitTarget.body.infection_level + strength
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.body.infection_level = value
-		end
-		if etype == 'blood' or etype == 'all' then
-			value = unitTarget.body.blood_count + strength
-			if value > unitTarget.body.blood_max then value = unitTarget.body.blood_max end
-			if value < 0 then blood = 0 end
-			unitTarget.body.blood_count = value
-		end
-	elseif ctype == 'percent' then
-		local percent = (100+strength)/100
-		if etype == 'web' or etype =='all' then
-			value = math.floor(unitTarget.counters.webbed*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.webbed = value
-		end
-		if etype == 'stun' or etype =='all' then
-			value = math.floor(unitTarget.counters.stunned*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.stunned = value
-		end
-		if etype == 'winded' or etype =='all' then 
-			value = math.floor(unitTarget.counters.winded*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.winded = value
-		end
-		if etype == 'unconscious' or etype =='all' then 
-			value = math.floor(unitTarget.counters.unconscious*percent)
-			if value > int16 then value = int16 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.unconscious = value
-		end
-		if etype == 'pain' or etype =='all' then 
-			value = math.floor(unitTarget.counters.pain*percent)
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.pain = value
-		end
-		if etype == 'nausea' or etype =='all' then 
-			value = math.floor(unitTarget.counters.nausea*percent)
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.nausea = value
-		end
-		if etype == 'dizziness' or etype =='all' then 
-			value = math.floor(unitTarget.counters.dizziness*percent)
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.dizziness = value
-		end
-		if etype == 'paralysis' or etype =='all' then 
-			value = math.floor(unitTarget.counters.paralysis*percent)
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.paralysis = value
-		end
-		if etype == 'numbness' or etype =='all' then 
-			value = math.floor(unitTarget.counters.numbness*percent)
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.numbness = value
-		end
-		if etype == 'fever' or etype =='all' then 
-			value = math.floor(unitTarget.counters.fever*percent)
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.fever = value
-		end
-		if etype == 'exhaustion' or etype =='all' then 
-			value = math.floor(unitTarget.counters.exhaustion*percent)
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.exhaustion = value
-		end
-		if etype == 'hunger' or etype =='all' then 
-			value = math.floor(unitTarget.counters.hunger_timer*percent)
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.hunger_timer = value
-		end
-		if etype == 'thirst' or etype =='all' then 
-			value = math.floor(unitTarget.counters.thirst_timer*percent)
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.thirst_timer = value
-		end
-		if etype == 'sleep' or etype =='all' then 
-			value = math.floor(unitTarget.counters.sleepiness_timer*percent)
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.counters.sleepiness_timer = value
-		end
-		if etype == 'infection' or etype =='all' then 
-			value = math.floor(unitTarget.body.infection_level*percent)
-			if value > int32 then value = int32 end
-			if value < 0 then value = 0 end
-			unitTarget.body.infection_level = value
-		end
-		if etype == 'blood' or etype == 'all' then
-			blood = math.floor(unitTarget.body.blood_count*percent)
-			if blood > unitTarget.body.blood_max then blood = unitTarget.body.blood_max end
-			if blood < 0 then blood = 0 end
-			unitTarget.body.blood_count = blood
-		end
+		if value > int16 then value = int16 end
+		if value < 0 then value = 0 end
+		unitTarget.body.infection_level = value
 	end
 end
 
 local types = args[1]
 local unit = df.unit.find(tonumber(args[2]))
 local ctype = args[3]
-local strengtha = split(args[4],'/')
-local typea = split(types,'/')
+local strengtha = split(args[4],'+')
+local typea = split(types,'+')
+local ctypea = split(ctype,'+')
+local dur = 0
+if #args == 5 then dur = tonumber(args[5]) end
 
 for i,etype in ipairs(typea) do
-	effect(etype,unit,ctype,tonumber(strengtha[i]))
+	save = effect(etype,unit,ctypea[i],tonumber(strengtha[i]),0,1)
+	if dur > 0 then
+		dfhack.timeout(dur,'ticks',createcallback(etype,unit,ctypea[i],tonumber(strengtha[i]),save))
+	end
 end
+
+
