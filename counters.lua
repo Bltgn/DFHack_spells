@@ -41,11 +41,12 @@ function split(str, pat)
 end
 
 function counters(unit,array)
-	keys = unit
-	types = array[1]
-	ints = array[2]
-	style = split(array[3],'_')[1]
-	n = tonumber(split(array[3],'_')[2])
+	tempa = array
+	keys = tostring(unit.id)
+	types = tempa[1]
+	ints = tonumber(tempa[2])
+	style = tempa[3]
+	n = tonumber(tempa[4])
 	v = 0
 	skey = ''
 	si = 0
@@ -136,8 +137,10 @@ function counters(unit,array)
 		dfhack.persistent.save({key=pers.key,value=pers.value,ints=pers.ints})
 	end
 
+
 	if style == 'minimum' then
-		if v >= n and n >= 0 then
+		print(v,n,skey,si)
+		if tonumber(v) >= n and n >= 0 then
 			pers,status=dfhack.persistent.get(skey)
 			pers.ints[si] = 0
 			dfhack.persistent.save({key=skey,value=pers.value,ints=pers.ints})
@@ -157,10 +160,10 @@ function counters(unit,array)
 	return false
 end
 
-trigger = counters(arg[1],{arg[2],arg[3],arg[4]})
+trigger = counters(arg[1],{arg[2],arg[3],arg[4],arg[5]})
 if trigger then
-	local script = split(arg[5],'@')[1]
-	local sargsa = split(split(arg[5],'@')[2],';')
+	local script = split(arg[6],'@')[1]
+	local sargsa = split(split(arg[6],'@')[2],';')
 	for i,v in ipairs(sargsa) do
 		if v == '!UNIT' then sargsa[i] = arg[1] end
 	end

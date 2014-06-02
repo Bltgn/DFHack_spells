@@ -1,14 +1,14 @@
 --teleportbase.lua v1.0
--- MUST BE LOADED IN DFHACK.INIT
+--	MUST BE LOADED IN DFHACK.INIT
 --	Use with teleport.lua
--- Requires two buildings named TELEPORT_! and TELEPORT_2
+--	Requires two buildings named TELEPORT_1 and TELEPORT_2
 
 events = require "plugins.eventful"
 events.enableEvent(events.eventType.BUILDING,100)
 
 events.onBuildingCreatedDestroyed.teleport=function(building_id)
 	bldg = df.building.find(building_id)
-	if bldg then
+	if df.building_furnacest:is_instance(bldg) or df.building_workshopst:is_instance(bldg) then
 		all_bldgs = df.global.world.raws.buildings.all
 		btype = bldg.custom_type
 		if btype < 0 then return end

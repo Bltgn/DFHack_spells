@@ -168,7 +168,7 @@ function upgradeitem(reaction,unit,input_items,input_reagents,output_items,call_
 			end	
 		end
 		local rando = dfhack.random.new()
-		sitems = {sitems[rando:random(#sitems)}
+		sitems = {sitems[rando:random(#sitems)]}
 	end
 
 	if args[1] == 'upgrade' then

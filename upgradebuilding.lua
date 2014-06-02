@@ -120,11 +120,13 @@ function upgradebuilding(reaction,unit,input_items,input_reagents,output_items,c
 		local bldga = {}
 		local i = 0
 		for _,x in ipairs(df.global.world.buildings.all) do
-			local ctype = x.custom_type
-			if ctype >= 0 then
-				if df.global.world.raws.buildings.all[ctype].code == args[0] then 
-					bldga[i] = x
-					i = i+1
+			if df.building_furnacest:is_instance(x) or df.building_workshopst:is_instance(x) then
+				local ctype = x.custom_type
+				if ctype >= 0 then
+					if df.global.world.raws.buildings.all[ctype].code == args[0] then 
+						bldga[i] = x
+						i = i+1
+					end
 				end
 			end
 		end
@@ -150,9 +152,9 @@ function upgradebuilding(reaction,unit,input_items,input_reagents,output_items,c
 		end
 		
 		bldg.custom_type=ctype
-		
-		for i,x in ipairs(bldg.contained_items) do
-			for j,y in ipairs(sitems) do
+
+		for _,x in pairs(bldg.contained_items) do
+			for _,y in pairs(sitems) do
 				if x.item == y then 
 					x.use_mode = 2 
 					x.item.flags.in_building = true 
@@ -178,8 +180,8 @@ function upgradebuilding(reaction,unit,input_items,input_reagents,output_items,c
 		
 		bldg.custom_type=ctype
 		
-		for i,x in ipairs(bldg.contained_items) do
-			for j,y in ipairs(sitems) do
+		for _,x in pairs(bldg.contained_items) do
+			for _,y in pairs(sitems) do
 				if x.item == y then 
 					x.use_mode = 2 
 					x.item.flags.in_building = true 
@@ -200,8 +202,8 @@ function upgradebuilding(reaction,unit,input_items,input_reagents,output_items,c
 		
 		bldg.custom_type=ctype
 		
-		for i,x in ipairs(bldg.contained_items) do
-			for j,y in ipairs(sitems) do
+		for _,x in pairs(bldg.contained_items) do
+			for _,y in pairs(sitems) do
 				if x.item == y then 
 					x.use_mode = 2 
 					x.item.flags.in_building = true 

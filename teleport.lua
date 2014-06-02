@@ -129,12 +129,14 @@ else
 					a = a + 1
 				end
 			else
-				local btype = bldg.custom_type
-				local all_bldgs = df.global.world.raws.buildings.all
-				if btype >= 0 then
-					if all_bldgs[btype].code == dira[2] then
-						array[a] = tostring(bldg.centerx)..'_'..tostring(bldg.centery)..'_'..tostring(bldg.z)
-						a = a + 1
+				if df.building_workshopst:is_instance(bldg) or df.building_furnacest:is_instance(bldg) then
+					local btype = bldg.custom_type
+					local all_bldgs = df.global.world.raws.buildings.all
+					if btype >= 0 then
+						if all_bldgs[btype].code == dira[2] then
+							array[a] = tostring(bldg.centerx)..'_'..tostring(bldg.centery)..'_'..tostring(bldg.z)
+							a = a + 1
+						end
 					end
 				end
 			end
