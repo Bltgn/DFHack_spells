@@ -1,6 +1,6 @@
---upgradeitem.lua v1.0
+--improveitem.lua v1.0
 --[[
-upgradeitem - used to upgrade item from one to another, or to change them from one to another, using interactions
+improveitem - used to improve item quality, using interactions
 	ID # - the units id number
 		\UNIT_ID - when triggering with a syndrome
 		\WORKER_ID - when triggering with a reaction
@@ -23,15 +23,10 @@ upgradeitem - used to upgrade item from one to another, or to change them from o
 	method - how to change the items
 		upgrade - changes item id from BLAH_BLAH_BLAH_1 to BLAH_BLAH_BLAH_2
 		downgrade - changes item id from BLAH_BLAH_BLAH_2 to BLAH_BLAH_BLAH_1
-		ITEM_ID - changes item id to given ITEM_ID
+		# - changes item id to given ITEM_ID
 	(OPTIONAL) duration - sets a specified length of time for the changes to last (in in-game ‘ticks’)
 		#
 			DEFAULT: 0 - value changes will be permanent
-			
-	RESTRICTIONS!
-		Only upgrade between the same types (i.e. ARMOR -> ARMOR), never upgrade to different types
-		Can upgrade anything with a subtype (including toys, instruments, siegeammo, etc...)
-		Will not downgrade if item is at _1 and will not upgrade if there is no higher _#
 --]]
 
 function split(str, pat)
@@ -55,7 +50,7 @@ end
 
 function createcallback(x,sid)
 	return function(resetitem)
-		x:setSubtype(sid)
+		x:setQuality(sid)
 	end
 end
 
@@ -136,46 +131,22 @@ function upgradeitem(args)
 	if args[5] == 'upgrade' then
 -- Increase items number by one
 		for _,x in ipairs(sitems) do
-			local name = x.subtype.id
-			if dur > 0 then sid = x.subtype.subtype end
-			local namea = split(name,'_')
-			local num = tonumber(namea[#namea])
-			num = num + 1
-			namea[#namea] = tostring(num)
-			name = table.concat(namea,'_')
-			item_index = itemSubtypes(x)
-			for i=0,dfhack.items.getSubtypeCount(item_index)-1,1 do
-				item_sub = dfhack.items.getSubtypeDef(item_index,i)
-				if item_sub.id == name then x:setSubtype(item_sub.subtype) end
-			end
+			sid = x.quality
+			x:setQuality(sid+1)
 			if dur > 0 then dfhack.timeout(dur,'ticks',createcallback(x,sid)) end
 		end
 	elseif args[5] == 'downgrade' then
 -- Decrease items number by one
 		for _,x in ipairs(sitems) do
-			local name = x.subtype.id
-			if dur > 0 then sid = x.subtype.subtype end
-			local namea = split(name,'_')
-			local num = tonumber(namea[#namea])
-			num = num - 1
-			if num > 0 then namea[#namea] = tostring(num) end
-			name = table.concat(namea,'_')
-			item_index = itemSubtypes(x)
-			for i=0,dfhack.items.getSubtypeCount(item_index)-1,1 do
-				item_sub = dfhack.items.getSubtypeDef(item_index,i)
-				if item_sub.id == name then x:setSubtype(item_sub.subtype) end
-			end
+			sid = x.quality
+			x:setQuality(sid-1)
 			if dur > 0 then dfhack.timeout(dur,'ticks',createcallback(x,sid)) end
 		end
 	else
 -- Change item to new item
 		for _,x in ipairs(sitems) do
-			if dur > 0 then sid = x.subtype.subtype end
-			item_index = itemSubtypes(x)
-			for i=0,dfhack.items.getSubtypeCount(item_index)-1,1 do
-				item_sub = dfhack.items.getSubtypeDef(item_index,i)
-				if item_sub.id == args[5] then x:setSubtype(item_sub.subtype) end
-			end
+			sid = x.quality
+			x:setQuality(tonumber(args[5]))
 			if dur > 0 then dfhack.timeout(dur,'ticks',createcallback(x,sid)) end
 		end
 	end

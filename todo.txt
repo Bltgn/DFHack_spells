@@ -1,4 +1,11 @@
 addsyndrome.lua		v1.0
+base_copyitem.lua	v1.0
+base_counters.lua	v0.0
+base_imbueitem.lua	v1.0
+base_improveitem.lua	v1.0
+base_teleport		v1.0
+base_upgradebuilding	v1.0
+base_upgradeitem	v1.0
 changeattributes.lua	v1.0
 changebody.lua		v1.0
 changeboolean.lua	v1.0
@@ -7,7 +14,6 @@ changetile.lua		v1.0
 changetraits.lua	v1.0
 changevalues.lua	v1.0
 counters.lua		v1.0
-countersbase.lua	v0.0
 createitem.lua		v1.0
 customweather.lua	v1.0
 eruption.lua		v1.0
@@ -16,8 +22,6 @@ projectile.lua		v1.0
 propel.lua		v1.0
 spawnflow.lua		v1.0
 teleport.lua		v1.0
-teleportbase.lua	v1.0
-upgradebuilding.lua	v1.0
 upgradeitem.lua		v1.0
 wrapper.lua		v1.0
 
@@ -41,5 +45,19 @@ createitem.lua
 changeboolean.lua
 -Figure out the crashes
 
-countersbase.lua
+base_counters.lua
 -Add kill counter
+-Track Megabeast kills
+-Track Semi-Megabeast kills
+
+upgradebuilding.lua
+-Create interaction based changing of buildings
+
+base_upgradebuilding.lua
+-Remove contained items after duration check?
+
+addsyndrome.lua
+-Allow for more than one syndrome on each inorganic, and pick amongst them
+
+vanillachange.lua
+-Create option for removing vanilla buildings

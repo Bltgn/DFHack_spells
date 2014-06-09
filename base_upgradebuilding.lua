@@ -1,4 +1,4 @@
---upgradebuilding.lua v1.0
+--base_upgradebuilding.lua v1.0
 --MUST BE LOADED IN DFHACK.INIT
 --[[
 upgradebuilding - used to upgrade buildings from one to another, or to change them from one to another
@@ -20,7 +20,7 @@ upgradebuilding - used to upgrade buildings from one to another, or to change th
 			[PRODUCT:100:0:BOULDER:NONE:INORGANIC:UPGRADE_BUILDING]
 	
 	INORGANIC OPTIONS:
-		Inorganics must have a syndrome with two [SYN_CLASS:] tags
+		Inorganics must have a syndrome with at least two [SYN_CLASS:] tags
 		Valid arguments for the first SYN_CLASS;
 			here - this will change this particular building
 			BUILDING_TOKEN - this will change a randomly selected building of the given token (e.g. TEST_BUILDING_1)
@@ -28,7 +28,8 @@ upgradebuilding - used to upgrade buildings from one to another, or to change th
 			upgrade - this will upgrade the building from the name to one higher (i.e. TEST_BUILDING_1 -> TEST_BUILDING_2)
 			downgrade - this will downgrade the building from the name to one lower (i.e. TEST_BUILDING_2 -> TEST_BUILDING_1)
 			BUILDING_TOKEN - this will change the building to a completely new token (i.e. TEST_BUILDING_1 -> RESEARCH_BUILDING)
-
+		(OPTIONAL) A third SYN_CLASS can be added to specify duration of the change. Defaults to permanent. Duration is in in-game ticks
+		
 	EXAMPLE INORGANIC:
 		[INORGANIC:UPGRADE_BUILDING]
 			[USE_MATERIAL_TEMPLATE:STONE_VAPOR_TEMPLATE]
@@ -94,13 +95,19 @@ function split(str, pat)
    return t
 end
 
+function createcallback(x,sid)
+	return function(resetbuilding)
+		x.custom_type = sid
+	end
+end
+
 function upgradebuilding(reaction,unit,input_items,input_reagents,output_items,call_native)
 	local sitems = {}
 	for i,x in ipairs(input_reagents) do
 		if x.flags.PRESERVE_REAGENT then sitems[i] = input_items[i] end
 	end
 	local pos = unit.pos
-	
+	printall(input_reagents[1])
 	local ptype = reaction.products[0].mat_type
 	local pindx = reaction.products[0].mat_index
 	local product = dfhack.matinfo.decode(ptype,pindx)
@@ -108,6 +115,9 @@ function upgradebuilding(reaction,unit,input_items,input_reagents,output_items,c
 	for i,x in ipairs(product.material.syndrome[0].syn_class) do
 		args[i] = x.value
 	end
+	
+	local dur = 0
+	if #args == 3 then dur = tonumber(args[2]) end
 	
 	local bldg
 	if args[0] == 'here' then 
@@ -137,6 +147,7 @@ function upgradebuilding(reaction,unit,input_items,input_reagents,output_items,c
 	if args[1] == 'upgrade' then
 -- Increase buildings number by one
 		local name = df.global.world.raws.buildings.all[bldg.custom_type].code
+		if dur > 0 then sid = bldg.custom_type end
 		local namea = split(name,'_')
 		local num = tonumber(namea[#namea])
 		num = num + 1
@@ -161,9 +172,11 @@ function upgradebuilding(reaction,unit,input_items,input_reagents,output_items,c
 				end
 			end
 		end
+		if dur > 0 then dfhack.timeout(dur,'ticks',createcallback(bldg,sid)) end
 	elseif args[1] == 'downgrade' then
 -- Decrease buildings number by one
 		local name = df.global.world.raws.buildings.all[bldg.custom_type].code
+		if dur > 0 then sid = bldg.custom_type end
 		local namea = split(name,'_')
 		local num = tonumber(namea[#namea])
 		num = num - 1
@@ -188,8 +201,10 @@ function upgradebuilding(reaction,unit,input_items,input_reagents,output_items,c
 				end
 			end
 		end
+		if dur > 0 then dfhack.timeout(dur,'ticks',createcallback(bldg,sid)) end
 	else
 -- Change building to new building
+		if dur > 0 then sid = bldg.custom_type end
 		local name = args[1]
 		local ctype = nil
 		for _,x in ipairs(df.global.world.raws.buildings.all) do
@@ -210,6 +225,7 @@ function upgradebuilding(reaction,unit,input_items,input_reagents,output_items,c
 				end
 			end
 		end
+		if dur > 0 then dfhack.timeout(dur,'ticks',createcallback(bldg,sid)) end
 	end
 end
 

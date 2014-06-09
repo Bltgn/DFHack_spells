@@ -1097,26 +1097,45 @@ function scriptRun(arg)
 		if count > 0 then unit2 = targetList[math.random(1,#targetList)] end
 		local selected,targetList,unitSelf,verbose,announcement = isSelected(unit1,unit2,arg,count)
 
-		local ntargets = 0
+		local targets = {}
+		local nn = 1
+		if script['maxtargets'] == 0 then
+			for i,x in ipairs(targetList) do
+				if selected[i] then
+					targets[nn] = x
+					nn = nn + 1
+				end
+			end
+		else
+			local rando = dfhack.random.new()
+			local temptargets = {}
+			for i,x in ipairs(targetList) do
+				if selected[i] then
+					temptargets[nn] = x
+					nn = nn + 1
+				end
+			end
+			for i = 1,script['maxtargets'],1 do
+				local j = rando:random(#temptargets)
+				targets[i] = temptargets[j]				
+			end
+		end
+		
 		local scripta = split(script['script'],',')
 		local argsa = split(script['args'],',')
 		for i,x in ipairs(scripta) do
-			for j,y in ipairs(targetList) do
-				if selected[j] then
-					local sargsa = split(argsa[i],';')
-					for k,z in ipairs(sargsa) do
-						if z == '!UNIT' then sargsa[k] = y.id end
-						if z == '!LOCATION' then sargsa[k] = y.pos end
-						if z == '!SELF' then sargsa[k] = unitSelf.id end
-						if z == '!VALUE' then sargsa[k] = getValue(selected,targetList,unitSelf,script['value']) end
-					end
-					if script['delay'] == 0 then 
-						dfhack.run_script(x,table.unpack(sargsa))
-					else
-						dfhack.timeout(tonumber(script['delay']),'ticks',callback(x,sargsa))
-					end
-					ntargets = ntargets + 1
-					if ntargets > script['maxtargets'] and script['maxtargets'] > 0 then return end
+			for j,y in ipairs(targets) do
+				local sargsa = split(argsa[i],';')
+				for k,z in ipairs(sargsa) do
+					if z == '!UNIT' then sargsa[k] = y.id end
+					if z == '!LOCATION' then sargsa[k] = y.pos end
+					if z == '!SELF' then sargsa[k] = unitSelf.id end
+					if z == '!VALUE' then sargsa[k] = getValue(selected,targetList,unitSelf,script['value']) end
+				end
+				if script['delay'] == 0 then 
+					dfhack.run_script(x,table.unpack(sargsa))
+				else
+					dfhack.timeout(tonumber(script['delay']),'ticks',callback(x,sargsa))
 				end
 			end
 		end
