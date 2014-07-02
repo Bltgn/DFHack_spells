@@ -157,7 +157,6 @@ function improveitem(reaction,unit,input_items,input_reagents,output_items,call_
 
 		for _,x in pairs(sitems) do
 			sid = math.min(5, x.quality+increase)
-			print(sid)
 			x:setQuality(sid)
 			if dur > 0 then dfhack.timeout(dur,'ticks',createcallback(x,sid)) end
 		end
